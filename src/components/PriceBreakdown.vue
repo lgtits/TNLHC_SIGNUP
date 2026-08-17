@@ -64,15 +64,18 @@ defineProps<{
     align-items: baseline;
     justify-content: space-between;
     gap: 16px;
-    padding-top: 14px;
-    font-size: 14px;
+    margin-top: 4px;
+    padding-top: 16px;
+    border-top: 2px solid var(--ink);
+    font-size: 11px;
     font-weight: 700;
+    letter-spacing: 0.16em;
 
     strong {
-      font-size: 26px;
+      font-size: 30px;
       font-weight: 800;
-      color: var(--q-primary);
-      letter-spacing: -0.01em;
+      color: var(--ink);
+      letter-spacing: -0.02em;
     }
   }
 }

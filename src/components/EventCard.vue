@@ -1,59 +1,50 @@
 <template>
   <article
-    class="event-card surface-card"
+    class="event-card"
+    :class="{ 'has-image': !!imageSrc }"
     role="button"
     tabindex="0"
     @click="emit('select', event)"
     @keydown.enter.prevent="emit('select', event)"
     @keydown.space.prevent="emit('select', event)"
   >
-    <div class="event-card__cover" :style="coverStyle">
-      <q-icon :name="event.icon" size="34px" />
-      <q-badge class="event-card__status" :class="`is-${event.status}`" rounded>
-        {{ statusLabel }}
-      </q-badge>
+    <!-- 左：標題，照片當背景；沒照片就是淺灰底 -->
+    <div class="event-card__main" :style="mainStyle">
+      <div class="event-card__inner">
+        <p class="eyebrow event-card__status" :class="`is-${event.status}`">
+          {{ statusLabel }}
+        </p>
+        <h3 class="event-card__title">{{ event.title }}</h3>
+        <p class="event-card__subtitle">{{ event.subtitle }}</p>
+      </div>
     </div>
 
-    <div class="event-card__body">
-      <h3 class="event-card__title">{{ event.title }}</h3>
-      <p class="event-card__subtitle">{{ event.subtitle }}</p>
-
-      <div class="event-card__meta">
-        <span><q-icon name="event" size="16px" /> {{ dateText }}</span>
-        <span><q-icon name="place" size="16px" /> {{ event.location }}</span>
-      </div>
-
-      <div v-if="showTags && event.tags.length" class="event-card__tags">
-        <q-chip
-          v-for="tag in event.tags"
-          :key="tag"
-          dense
-          square
-          outline
-          color="primary"
-          text-color="primary"
-          :ripple="false"
-        >
-          {{ tag }}
-        </q-chip>
-      </div>
-
-      <div class="event-card__footer">
-        <div class="event-card__price">
-          <span class="text-muted">最低</span>
-          <strong>{{ formatPrice(fromPrice) }}</strong>
-          <span class="text-muted">起 / 人</span>
+    <!-- 右：資訊與報名 -->
+    <div class="event-card__aside">
+      <dl class="event-card__info">
+        <div>
+          <dt>日期</dt>
+          <dd>{{ dateText }}</dd>
         </div>
-        <q-btn
-          unelevated
-          no-caps
-          color="primary"
-          :disable="isClosed"
-          :label="isClosed ? '已截止' : '我要報名'"
-          icon-right="chevron_right"
-          @click.stop="emit('select', event)"
-        />
-      </div>
+        <div>
+          <dt>地點</dt>
+          <dd>{{ event.location }}</dd>
+        </div>
+        <div v-if="deadlineText">
+          <dt>報名截止</dt>
+          <dd>{{ deadlineText }}</dd>
+        </div>
+      </dl>
+
+      <q-btn
+        unelevated
+        no-caps
+        color="primary"
+        class="event-card__btn"
+        :disable="isClosed"
+        :label="isClosed ? '已截止' : '立即報名'"
+        @click.stop="emit('select', event)"
+      />
     </div>
   </article>
 </template>
@@ -61,7 +52,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { EventItem } from 'src/types/signup';
-import { formatDateRange, formatPrice } from 'src/lib/format';
+import { formatDate, formatDateRange } from 'src/lib/format';
+import { assetUrl } from 'src/lib/assets';
 
 const props = withDefaults(
   defineProps<{
@@ -83,135 +75,186 @@ const STATUS_LABEL: Record<EventItem['status'], string> = {
 };
 
 const statusLabel = computed(() => STATUS_LABEL[props.event.status]);
+
 const isClosed = computed(
   () => props.event.status === 'closed' || props.event.status === 'full',
+);
+
+const imageSrc = computed(() => assetUrl(props.event.image));
+
+const mainStyle = computed(() =>
+  imageSrc.value ? { backgroundImage: `url("${imageSrc.value}")` } : undefined,
 );
 
 const dateText = computed(() =>
   formatDateRange(props.event.startDate, props.event.endDate),
 );
 
-const coverStyle = computed(() => ({
-  background: `linear-gradient(135deg, ${props.event.coverFrom} 0%, ${props.event.coverTo} 100%)`,
-}));
-
-/** 卡片上的「最低價」：基本費 + 最便宜房型 − 早鳥 */
-const fromPrice = computed(() => {
-  const cheapest = props.event.roomTypes.reduce(
-    (min, room) => Math.min(min, room.price),
-    Number.POSITIVE_INFINITY,
-  );
-  const room = Number.isFinite(cheapest) ? cheapest : 0;
-  return Math.max(0, props.event.basePrice + room - props.event.earlyBirdDiscount);
+const deadlineText = computed(() => {
+  const deadline = props.event.registration.deadline;
+  return deadline ? formatDate(deadline) : '';
 });
 </script>
 
 <style scoped lang="scss">
 .event-card {
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 290px);
+  background: var(--card-bg);
+  border: 1px solid var(--hairline);
   cursor: pointer;
-  transition: box-shadow 0.18s ease, transform 0.18s ease;
 
-  &:hover,
   &:focus-visible {
-    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.1);
-    outline: none;
+    outline: 2px solid var(--ink);
+    outline-offset: -2px;
   }
 
-  &:active {
-    transform: scale(0.995);
-  }
-
-  &__cover {
+  // 左欄：照片鋪底，文字壓在上面
+  &__main {
     position: relative;
-    height: 86px;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    color: rgba(255, 255, 255, 0.9);
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: 168px;
+    padding: 22px var(--content-pad-x);
+    background-color: #e9e8e5;
+    background-size: cover;
+    background-position: center 55%;
+    background-repeat: no-repeat;
+  }
+
+  // 深色遮罩：只有有照片時才蓋，確保白字讀得到
+  &__main::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      100deg,
+      rgba(0, 0, 0, 0.8) 0%,
+      rgba(0, 0, 0, 0.55) 60%,
+      rgba(0, 0, 0, 0.38) 100%
+    );
+    opacity: 0;
+  }
+
+  &__inner {
+    position: relative;
+    z-index: 1;
   }
 
   &__status {
-    position: absolute;
-    top: 10px;
-    right: 12px;
-    font-size: 11px;
-    font-weight: 700;
-    background: rgba(255, 255, 255, 0.92);
-    color: #2f6f5e;
-
     &.is-almost_full {
-      color: #b26a00;
+      color: var(--q-warning);
     }
 
     &.is-full,
     &.is-closed {
-      color: rgba(0, 0, 0, 0.5);
+      color: rgba(0, 0, 0, 0.38);
     }
-  }
-
-  &__body {
-    padding: 14px var(--content-pad-x) 16px;
   }
 
   &__title {
-    margin: 0;
-    font-size: 17px;
+    margin: 8px 0 0;
+    font-size: 22px;
     font-weight: 800;
-    line-height: 1.3;
+    line-height: 1.22;
+    letter-spacing: -0.02em;
   }
 
   &__subtitle {
-    margin: 3px 0 0;
+    margin: 6px 0 0;
     font-size: 13px;
+    line-height: 1.55;
     color: var(--text-muted);
   }
 
-  &__meta {
+  &__aside {
     display: flex;
-    flex-wrap: wrap;
-    gap: 4px 14px;
-    margin-top: 10px;
-    font-size: 13px;
-    color: var(--text-muted);
+    flex-direction: column;
+    justify-content: center;
+    padding: 20px var(--content-pad-x);
+    border-left: 1px solid var(--hairline);
+  }
 
-    span {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
+  &__info {
+    margin: 0;
+
+    > div {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--hairline);
+
+      &:first-child {
+        padding-top: 0;
+      }
     }
-  }
 
-  &__tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 10px;
+    dt {
+      flex: 0 0 auto;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: var(--text-muted);
+    }
 
-    :deep(.q-chip) {
+    dd {
       margin: 0;
-      font-size: 11.5px;
+      text-align: right;
+      font-size: 12.5px;
+      line-height: 1.45;
+      font-weight: 600;
     }
   }
 
-  &__footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+  &__btn {
+    width: 100%;
     margin-top: 14px;
-    padding-top: 12px;
-    border-top: 1px dashed var(--hairline);
+    padding: 10px 0;
   }
+}
 
-  &__price {
-    display: flex;
-    align-items: baseline;
-    gap: 4px;
-    font-size: 12px;
+// 有照片時：遮罩打開，文字轉白
+.event-card.has-image .event-card__main::before {
+  opacity: 1;
+}
 
-    strong {
-      font-size: 18px;
-      color: var(--q-primary);
+.event-card.has-image .event-card__title {
+  color: #fff;
+}
+
+.event-card.has-image .event-card__subtitle {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.event-card.has-image .event-card__status {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+// ── 手機：單欄堆疊 ────────────────────────────────────────
+@media (max-width: 767px) {
+  .event-card {
+    grid-template-columns: 1fr;
+
+    &__main {
+      min-height: 148px;
+      padding: 18px var(--content-pad-x);
+    }
+
+    &__title {
+      font-size: 20px;
+    }
+
+    &__aside {
+      border-left: none;
+      border-top: 1px solid var(--hairline);
+      padding: 16px var(--content-pad-x) 18px;
+    }
+
+    &__btn {
+      padding: 12px 0;
     }
   }
 }

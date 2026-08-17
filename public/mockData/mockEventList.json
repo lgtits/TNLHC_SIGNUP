@@ -1,166 +1,181 @@
 [
   {
-    "id": "evt-2026-autumn-retreat",
-    "title": "2026 秋季靈修營",
-    "subtitle": "三天兩夜．重新得力",
-    "coverFrom": "#2f6f5e",
-    "coverTo": "#5fbfa1",
+    "id": "evt-2026-retreat",
+    "title": "2026 退修會",
+    "subtitle": "林子內教會．同工退修會",
+    "image": "images/events/retreat-2026.jpg",
+    "coverFrom": "#8f5a2f",
+    "coverTo": "#d9a25c",
     "icon": "self_improvement",
-    "startDate": "2026-09-25",
-    "endDate": "2026-09-27",
-    "location": "南投．清境會館",
-    "description": "遠離喧囂三天兩夜，透過晨禱、專題與小組分享重新調整生活節奏。含全程餐食、保險與接駁車。",
-    "basePrice": 2800,
-    "earlyBirdDiscount": 400,
-    "earlyBirdDeadline": "2026-08-31",
-    "tags": ["三天兩夜", "含餐", "提供接駁"],
+    "startDate": "2026-10-25",
+    "endDate": "2026-10-26",
+    "location": "林子內教會（臺南市白河區汴頭里 30-100 號）",
+    "description": "對象為小組長、小組核心同工、執事及其家人。10/25（日）下午開始，10/26（一）中午結束。住宿房型先訂先贏。交通以自行前往為原則。",
+    "basePrice": 0,
+    "tags": ["10/25–10/26","9/30 截止報名"],
     "status": "open",
-    "roomTypes": [
-      {
-        "id": "room-single",
-        "name": "單人房",
-        "description": "一大床，獨立衛浴，適合需要安靜獨處的人",
-        "capacity": 1,
-        "price": 3200,
-        "quota": 4
-      },
-      {
-        "id": "room-double",
-        "name": "雙人房",
-        "description": "兩小床，獨立衛浴，可指定同房夥伴",
-        "capacity": 2,
-        "price": 2200,
-        "quota": 12
-      },
-      {
-        "id": "room-quad",
-        "name": "四人房",
-        "description": "上下舖，共用樓層衛浴，最超值的選擇",
-        "capacity": 4,
-        "price": 1400,
-        "quota": 20
+    "registration": {
+      "deadline": "2026-09-30",
+      "requiresAccommodation": true,
+      "contactFields": [
+        {
+          "key": "email",
+          "label": "聯絡人 Email",
+          "type": "email",
+          "required": true,
+          "placeholder": "name@example.com",
+          "hint": "用來寄送赴會通知，單身者或每個家庭填一位即可"
+        }
+      ],
+      "participantFields": [
+        {
+          "key": "name",
+          "label": "姓名",
+          "type": "text",
+          "required": true,
+          "placeholder": "請填寫身分證上的姓名",
+          "maxLength": 30
+        },
+        {
+          "key": "phone",
+          "label": "聯絡電話",
+          "type": "tel",
+          "required": true,
+          "placeholder": "09xxxxxxxx",
+          "maxLength": 10
+        },
+        {
+          "key": "birthday",
+          "label": "出生年月日",
+          "type": "date",
+          "required": true,
+          "hint": "6 歲以下孩童餐費免費，需由生日判定"
+        },
+        {
+          "key": "twid",
+          "label": "身分證字號",
+          "type": "twid",
+          "required": true,
+          "placeholder": "A123456789",
+          "maxLength": 10,
+          "hint": "投保旅平險使用，僅供教會辦理保險"
+        }
+      ],
+      "roomTypes": [
+        {
+          "id": "room-tongpu",
+          "name": "通鋪",
+          "bedInfo": "20 人大通鋪",
+          "description": "主要提供給青少年、想自己睡的大孩子，或想帶小孩同住的父母。請自備睡袋。",
+          "bookingUnit": "bed",
+          "capacity": 20,
+          "available": 13,
+          "pricePerPerson": 250
+        },
+        {
+          "id": "room-301-302",
+          "name": "301、302 號房",
+          "bedInfo": "1 雙人床 + 2 單人床",
+          "bookingUnit": "room",
+          "capacity": 4,
+          "available": 2,
+          "pricePerPerson": 750
+        },
+        {
+          "id": "room-303",
+          "name": "303 號房",
+          "bedInfo": "2 單人床 + 2 雙人床",
+          "bookingUnit": "room",
+          "capacity": 6,
+          "available": 1,
+          "pricePerPerson": 670
+        },
+        {
+          "id": "room-304-306",
+          "name": "304、305、306 號房",
+          "bedInfo": "5 單人床",
+          "bookingUnit": "room",
+          "capacity": 5,
+          "available": 3,
+          "pricePerPerson": 800
+        },
+        {
+          "id": "room-307",
+          "name": "307 號房",
+          "bedInfo": "4 單人床",
+          "bookingUnit": "room",
+          "capacity": 4,
+          "available": 1,
+          "pricePerPerson": 880
+        },
+        {
+          "id": "room-308",
+          "name": "308 號房",
+          "bedInfo": "2 單人床",
+          "bookingUnit": "room",
+          "capacity": 2,
+          "available": 1,
+          "pricePerPerson": 1150,
+          "note": ""
+        },
+        {
+          "id": "room-309",
+          "name": "309 號房",
+          "bedInfo": "1 單人床 + 2 雙人床",
+          "bookingUnit": "room",
+          "capacity": 5,
+          "available": 1,
+          "pricePerPerson": 700,
+          "note": ""
+        },
+        {
+          "id": "room-310-313",
+          "name": "310、311、312、313 號房",
+          "bedInfo": "2 雙人床",
+          "bookingUnit": "room",
+          "capacity": 4,
+          "available": 4,
+          "pricePerPerson": 650,
+          "note": ""
+        }
+      ],
+      "addons": [
+        {
+          "id": "addon-meals",
+          "name": "餐費",
+          "description": "含 10/25 晚餐、10/26 早餐與午餐",
+          "price": 500,
+          "per": "per_person",
+          "optional": false,
+          "defaultOn": true,
+          "freeUnderAge": 6,
+          "ageFieldKey": "birthday"
+        },
+        {
+          "id": "addon-insurance",
+          "name": "旅平險",
+          "description": "由教會統一投保，需提供身分證字號與出生年月日",
+          "price": 100,
+          "per": "per_person",
+          "optional": false,
+          "defaultOn": true
+        }
+      ],
+      "notices": [
+        "住通鋪的人請自備睡袋。",
+        "會館全面需穿室內鞋，請自行攜帶。",
+        "請自備牙膏、牙刷、毛巾、杯子。",
+        "獨自一人參加者，請自行邀約同房室友，或由教會統一安排。",
+        "住宿確定後因故取消者，教會保留可退費金額核定之權利。"
+      ],
+      "payment": {
+        "bankName": "國泰世華銀行",
+        "bankCode": "013",
+        "account": "0635-0603-9438",
+        "accountName": "張天韻",
+        "noteFormat": "姓名（退修會）",
+        "dueDays": 3
       }
-    ]
-  },
-  {
-    "id": "evt-2026-family-camp",
-    "title": "2026 親子家庭營",
-    "subtitle": "全家一起放電的週末",
-    "coverFrom": "#c98b4b",
-    "coverTo": "#f0c088",
-    "icon": "family_restroom",
-    "startDate": "2026-10-10",
-    "endDate": "2026-10-11",
-    "location": "宜蘭．冬山河親水營地",
-    "description": "為學齡家庭設計的兩天一夜，白天有闖關遊戲與手作，晚上有營火晚會。12 歲以下孩童半價。",
-    "basePrice": 1800,
-    "earlyBirdDiscount": 200,
-    "earlyBirdDeadline": "2026-09-15",
-    "tags": ["兩天一夜", "適合親子", "戶外活動"],
-    "status": "almost_full",
-    "roomTypes": [
-      {
-        "id": "room-family-4",
-        "name": "家庭四人房",
-        "description": "兩大床，獨立衛浴，附小客廳",
-        "capacity": 4,
-        "price": 1800,
-        "quota": 6
-      },
-      {
-        "id": "room-family-6",
-        "name": "家庭六人房",
-        "description": "通舖型，適合三代同行或兩個小家庭",
-        "capacity": 6,
-        "price": 1300,
-        "quota": 3
-      },
-      {
-        "id": "room-tent",
-        "name": "營地帳篷",
-        "description": "現成帳篷含睡墊，共用衛浴，孩子最愛",
-        "capacity": 4,
-        "price": 800,
-        "quota": 10
-      }
-    ]
-  },
-  {
-    "id": "evt-2026-youth-winter",
-    "title": "2026 青年冬令會",
-    "subtitle": "跨年不留白",
-    "coverFrom": "#3a5ad5",
-    "coverTo": "#7fa8ff",
-    "icon": "local_fire_department",
-    "startDate": "2026-12-30",
-    "endDate": "2027-01-01",
-    "location": "台中．谷關教育中心",
-    "description": "16-30 歲青年專屬。三天兩夜的信息、詩歌與跨年守夜，一起用最有意義的方式迎接新的一年。",
-    "basePrice": 2400,
-    "earlyBirdDiscount": 0,
-    "earlyBirdDeadline": "",
-    "tags": ["16-30 歲", "跨年", "含餐"],
-    "status": "open",
-    "roomTypes": [
-      {
-        "id": "room-dorm-6",
-        "name": "六人房",
-        "description": "上下舖，房內衛浴，同性別分房",
-        "capacity": 6,
-        "price": 1200,
-        "quota": 24
-      },
-      {
-        "id": "room-dorm-8",
-        "name": "八人通舖",
-        "description": "和室通舖，共用樓層衛浴，價格最親民",
-        "capacity": 8,
-        "price": 900,
-        "quota": 32
-      }
-    ]
-  },
-  {
-    "id": "evt-2026-worship-workshop",
-    "title": "敬拜團隊進修工作坊",
-    "subtitle": "單日不過夜也可報名",
-    "coverFrom": "#7a5bd6",
-    "coverTo": "#b79bff",
-    "icon": "music_note",
-    "startDate": "2026-11-08",
-    "endDate": "2026-11-09",
-    "location": "台北．信義音樂中心",
-    "description": "分器樂、主領、音控三軌進修。可選擇當日往返或住宿一晚，隔天上午加開合班排練。",
-    "basePrice": 1500,
-    "earlyBirdDiscount": 150,
-    "earlyBirdDeadline": "2026-10-20",
-    "tags": ["可單日", "分軌課程", "限額 60 人"],
-    "status": "open",
-    "roomTypes": [
-      {
-        "id": "room-none",
-        "name": "不需住宿（當日往返）",
-        "description": "只參加白天課程，不含住宿與早餐",
-        "capacity": 1,
-        "price": 0,
-        "quota": 30
-      },
-      {
-        "id": "room-twin",
-        "name": "雙人房",
-        "description": "鄰近會場的合作旅店，含早餐",
-        "capacity": 2,
-        "price": 1600,
-        "quota": 10
-      },
-      {
-        "id": "room-solo",
-        "name": "單人房",
-        "description": "鄰近會場的合作旅店，含早餐",
-        "capacity": 1,
-        "price": 2400,
-        "quota": 5
-      }
-    ]
+    }
   }
 ]

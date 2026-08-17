@@ -3,11 +3,14 @@
     <div class="page-shell">
       <template v-if="result">
         <!-- 成功抬頭 -->
-        <section class="surface-card result-page__hero">
-          <q-icon name="check_circle" size="42px" color="positive" />
-          <h1 class="result-page__title">報名資料已送出</h1>
+        <section class="result-page__hero">
+          <p class="eyebrow">Confirmation</p>
+          <h1 class="result-page__title">報名成功</h1>
           <p class="result-page__desc">
-            以下是這次報名的費用明細，請確認後於 3 天內完成繳費。
+            <template v-if="dueDateText">
+              請於 <strong>{{ dueDateText }}</strong> 前完成轉帳，逾期名額不予保留。
+            </template>
+            <template v-else>報名資料已送出，感謝你的參與。</template>
           </p>
           <div class="result-page__order">
             訂單編號 <strong>{{ result.orderNo }}</strong>
@@ -18,9 +21,48 @@
         <section class="surface-card result-page__block">
           <h2 class="section-title">費用明細</h2>
           <PriceBreakdown :items="result.breakdown" :total="result.total" />
-          <p v-if="configStore.SHOW_PRICE_NOTE" class="result-page__note">
-            金額為單人費用。若需開立收據或申請補助，請於繳費時一併告知。
-          </p>
+        </section>
+
+        <!-- 轉帳資訊 -->
+        <section v-if="payment" class="surface-card result-page__block">
+          <h2 class="section-title">轉帳資訊</h2>
+          <dl class="result-page__info">
+            <div>
+              <dt>銀行</dt>
+              <dd>{{ payment.bankName }}（代碼 {{ payment.bankCode }}）</dd>
+            </div>
+            <div>
+              <dt>帳號</dt>
+              <dd class="result-page__account">
+                <span>{{ payment.account }}</span>
+                <q-btn
+                  flat
+                  dense
+                  no-caps
+                  size="sm"
+                  color="primary"
+                  label="複製"
+                  @click="copyAccount"
+                />
+              </dd>
+            </div>
+            <div>
+              <dt>戶名</dt>
+              <dd>{{ payment.accountName }}</dd>
+            </div>
+            <div>
+              <dt>轉帳備註</dt>
+              <dd>{{ payment.noteFormat }}</dd>
+            </div>
+            <div>
+              <dt>繳費期限</dt>
+              <dd>{{ dueDateText }}</dd>
+            </div>
+            <div>
+              <dt>應繳金額</dt>
+              <dd>{{ formatPrice(result.total) }}</dd>
+            </div>
+          </dl>
         </section>
 
         <!-- 報名內容 -->
@@ -39,40 +81,46 @@
               <dt>地點</dt>
               <dd>{{ result.event.location }}</dd>
             </div>
-            <div>
-              <dt>姓名</dt>
-              <dd>{{ result.form.name }}</dd>
+            <div v-for="field in contactFields" :key="field.key">
+              <dt>{{ field.label }}</dt>
+              <dd>{{ displayValue(field, result.draft.contact[field.key] ?? '') }}</dd>
             </div>
-            <div>
-              <dt>電話</dt>
-              <dd>{{ result.form.phone }}</dd>
-            </div>
-            <div>
+            <div v-if="result.roomType">
               <dt>房型</dt>
-              <dd>{{ result.roomType.name }}（{{ result.roomType.capacity }} 人房）</dd>
+              <dd>{{ roomText }}</dd>
             </div>
           </dl>
         </section>
 
+        <!-- 參加者名單（有逐人填寫時才出現） -->
+        <section v-if="result.draft.participants.length" class="surface-card result-page__block">
+          <h2 class="section-title">
+            參加者名單
+            <span class="result-page__count">共 {{ result.draft.participants.length }} 位</span>
+          </h2>
+          <div
+            v-for="(person, index) in result.draft.participants"
+            :key="index"
+            class="result-page__person"
+          >
+            <div class="result-page__person-head">第 {{ index + 1 }} 位</div>
+            <dl class="result-page__info">
+              <div v-for="field in participantFields" :key="field.key">
+                <dt>{{ field.label }}</dt>
+                <dd>{{ displayValue(field, person[field.key] ?? '') }}</dd>
+              </div>
+            </dl>
+          </div>
+        </section>
+
         <!-- 返回 -->
-        <div class="sticky-actions result-page__actions">
-          <q-btn
-            outline
-            no-caps
-            color="primary"
-            size="lg"
-            class="col"
-            icon="arrow_back"
-            label="返回修改"
-            @click="goBackToForm"
-          />
+        <div class="sticky-actions">
           <q-btn
             unelevated
             no-caps
             color="primary"
             size="lg"
-            class="col"
-            icon="event"
+            class="full-width"
             label="回活動列表"
             @click="goPortal"
           />
@@ -94,12 +142,13 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import PriceBreakdown from 'components/PriceBreakdown.vue';
 import { useSignupStore } from 'src/stores/signup-store';
-import { useConfigStore } from 'src/stores/config-store';
-import { formatDateRange } from 'src/lib/format';
+import { useQuasar } from 'quasar';
+import { formatDateRange, formatPrice } from 'src/lib/format';
+import type { FieldDef } from 'src/types/signup';
 
+const $q = useQuasar();
 const router = useRouter();
 const signupStore = useSignupStore();
-const configStore = useConfigStore();
 
 const result = computed(() => signupStore.result);
 
@@ -109,15 +158,50 @@ const dateText = computed(() =>
     : '',
 );
 
-/** 返回表單：保留填過的資料，只清掉這次的試算結果 */
-function goBackToForm() {
-  const eventId = result.value?.event.id;
-  signupStore.clearResult();
-  if (eventId) {
-    void router.push({ name: 'signup', params: { eventId } });
-  } else {
-    void router.push({ name: 'portal' });
+const contactFields = computed(() => result.value?.event.registration.contactFields ?? []);
+const participantFields = computed(
+  () => result.value?.event.registration.participantFields ?? [],
+);
+
+const payment = computed(() => result.value?.event.registration.payment ?? null);
+
+/** 繳費期限 = 報名時間 + dueDays */
+const dueDateText = computed(() => {
+  const r = result.value;
+  const p = payment.value;
+  if (!r || !p) return '';
+  const due = new Date(r.createdAt);
+  if (Number.isNaN(due.getTime())) return '';
+  due.setDate(due.getDate() + p.dueDays);
+  return `${due.getFullYear()}/${due.getMonth() + 1}/${due.getDate()}`;
+});
+
+async function copyAccount() {
+  const account = payment.value?.account;
+  if (!account) return;
+  try {
+    await navigator.clipboard.writeText(account);
+    $q.notify({ message: '帳號已複製', position: 'top', timeout: 1500 });
+  } catch {
+    $q.notify({
+      type: 'negative',
+      message: '複製失敗，請手動選取帳號',
+      position: 'top',
+    });
   }
+}
+
+const roomText = computed(() => {
+  const r = result.value;
+  if (!r?.roomType) return '';
+  const room = r.roomType;
+  return room.bookingUnit === 'bed'
+    ? `${room.name}（${r.draft.units} 個床位）`
+    : `${room.name}（${r.draft.units} 間・每間 ${room.capacity} 人）`;
+});
+
+function displayValue(_field: FieldDef, value: string): string {
+  return value || '—';
 }
 
 function goPortal() {
@@ -127,30 +211,28 @@ function goPortal() {
 
 <style scoped lang="scss">
 .result-page {
-  &__hero,
   &__block {
     margin-bottom: var(--card-gap);
   }
 
   &__hero {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 28px var(--content-pad-x) 22px;
-    text-align: center;
+    padding: 4px var(--edge-pad-x) 24px;
+    margin-bottom: var(--card-gap);
+    border-bottom: 1px solid var(--hairline);
   }
 
   &__title {
-    margin: 0;
-    font-size: 20px;
+    margin: 10px 0 0;
+    font-size: 28px;
     font-weight: 800;
+    line-height: 1.18;
+    letter-spacing: -0.02em;
   }
 
   &__desc {
-    margin: 0;
-    font-size: 13px;
-    line-height: 1.65;
+    margin: 8px 0 0;
+    font-size: 13.5px;
+    line-height: 1.75;
     color: var(--text-muted);
   }
 
@@ -208,9 +290,39 @@ function goPortal() {
     color: var(--text-muted);
   }
 
-  &__actions {
+  &__account {
     display: flex;
-    gap: 10px;
+    align-items: center;
+    gap: 8px;
+
+    span {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: 0.04em;
+    }
+  }
+
+  &__count {
+    margin-left: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--q-primary);
+  }
+
+  &__person {
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border: 1px solid var(--hairline);
+
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  &__person-head {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--q-primary);
   }
 
   &__state {

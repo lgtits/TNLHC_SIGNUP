@@ -1,12 +1,12 @@
-// Quasar 品牌色（也在 quasar.config.ts 的 framework.config.brand 同步一份）
-$primary: #2f6f5e;
-$secondary: #c98b4b;
-$accent: #7a5bd6;
+// 以黑白為主軸的中性配色，不用彩度高的品牌色
+$primary: #0b0b0b;
+$secondary: #6b6b6b;
+$accent: #3d3d3d;
 
-$dark: #1d1d1d;
-$dark-page: #121212;
+$dark: #0b0b0b;
+$dark-page: #0b0b0b;
 
-$positive: #1f9d6b;
-$negative: #d3455b;
-$info: #3a7bd5;
-$warning: #e0a12a;
+$positive: #1d6f4a;
+$negative: #a32b22;
+$info: #3d3d3d;
+$warning: #8a6a1f;

@@ -1,8 +1,8 @@
 {
   "name": "tnlhc-signup",
   "version": "0.1.0",
-  "description": "TNLHC 活動報名系統（可嵌入 Google Sites）",
-  "productName": "TNLHC 報名系統",
+  "description": "世界之光聖教會 活動報名系統（可嵌入 Google Sites）",
+  "productName": "世界之光聖教會 報名系統",
   "author": "tnlhc",
   "private": true,
   "type": "module",

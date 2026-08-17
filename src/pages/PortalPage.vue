@@ -2,8 +2,9 @@
   <q-page class="portal-page">
     <div class="page-shell">
       <header class="page-heading">
+        <p class="eyebrow">Events</p>
         <h1 class="page-heading__title">活動報名</h1>
-        <p class="page-heading__desc">選擇想參加的活動，填好資料就完成報名。</p>
+        <p class="page-heading__desc">選擇想參加的活動，填好資料即完成報名。</p>
       </header>
 
       <!-- Loading -->

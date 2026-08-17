@@ -1,34 +1,60 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { EventItem, SignupForm, SignupResult } from 'src/types/signup';
+import type {
+  EventItem,
+  FieldDef,
+  FieldValues,
+  RoomType,
+  SignupDraft,
+  SignupResult,
+} from 'src/types/signup';
 
-function emptyForm(eventId = ''): SignupForm {
-  return { eventId, name: '', phone: '', roomTypeId: null };
+/** 依欄位定義產生一份空白資料 */
+function blankValues(fields: FieldDef[]): FieldValues {
+  return Object.fromEntries(fields.map((f) => [f.key, '']));
+}
+
+function blankDraft(eventId = ''): SignupDraft {
+  return {
+    eventId,
+    contact: {},
+    roomTypeId: null,
+    units: 1,
+    participants: [],
+    addons: {},
+  };
 }
 
 export const useSignupStore = defineStore('signup', () => {
   // ── State ──────────────────────────────────
   const events = ref<EventItem[]>([]);
   const currentEvent = ref<EventItem | null>(null);
-  const form = ref<SignupForm>(emptyForm());
+  const draft = ref<SignupDraft>(blankDraft());
   const result = ref<SignupResult | null>(null);
 
   // ── Getters ────────────────────────────────
-  const selectedRoomType = computed(() => {
-    if (!currentEvent.value || !form.value.roomTypeId) return null;
-    return currentEvent.value.roomTypes.find((r) => r.id === form.value.roomTypeId) ?? null;
+  const schema = computed(() => currentEvent.value?.registration ?? null);
+
+  const selectedRoom = computed<RoomType | null>(() => {
+    if (!schema.value || !draft.value.roomTypeId) return null;
+    return schema.value.roomTypes.find((r) => r.id === draft.value.roomTypeId) ?? null;
   });
 
-  /** 表單是否填齊，用來控制送出鍵 */
-  const isFormComplete = computed(
-    () =>
-      form.value.name.trim().length > 0 &&
-      form.value.phone.trim().length > 0 &&
-      form.value.roomTypeId !== null,
-  );
+  /**
+   * 要填幾個人的資料：
+   *   通鋪（bed）  → 訂幾個床位就填幾人
+   *   房間（room）→ 該房型床位數 × 訂幾間
+   *   不需住宿      → 不逐人填寫（0）
+   */
+  const requiredParticipants = computed(() => {
+    const room = selectedRoom.value;
+    if (!room || !schema.value?.participantFields.length) return 0;
+    return room.bookingUnit === 'bed'
+      ? draft.value.units
+      : room.capacity * draft.value.units;
+  });
 
-  /** 沒有結果就不該停在價格頁 */
-  const hasResult = computed(() => result.value !== null);
+  const needsAccommodation = computed(() => schema.value?.requiresAccommodation ?? false);
 
   // ── Actions ────────────────────────────────
   function setEvents(list: EventItem[]) {
@@ -37,43 +63,94 @@ export const useSignupStore = defineStore('signup', () => {
 
   function setCurrentEvent(event: EventItem | null) {
     currentEvent.value = event;
-    // 換活動就把表單的房型清掉，避免帶到別的活動的房型 id
-    if (event && form.value.eventId !== event.id) {
-      form.value = emptyForm(event.id);
+    if (!event) return;
+
+    // 換活動就整份重來，避免帶到別的活動的欄位或房型 id
+    if (draft.value.eventId !== event.id) {
+      draft.value = blankDraft(event.id);
+      draft.value.contact = blankValues(event.registration.contactFields);
+      draft.value.addons = Object.fromEntries(
+        event.registration.addons.map((a) => [a.id, a.defaultOn]),
+      );
+      syncParticipants();
     }
   }
 
-  function updateForm(patch: Partial<SignupForm>) {
-    form.value = { ...form.value, ...patch };
+  /** 讓 participants 的長度對上目前選的房型／數量 */
+  function syncParticipants() {
+    const fields = schema.value?.participantFields ?? [];
+    if (!fields.length) {
+      draft.value.participants = [];
+      return;
+    }
+
+    const target = requiredParticipants.value;
+    const list = [...draft.value.participants];
+
+    while (list.length < target) list.push(blankValues(fields));
+    list.length = Math.min(list.length, target);
+
+    draft.value.participants = list;
+  }
+
+  function setContactValue(key: string, value: string) {
+    draft.value.contact = { ...draft.value.contact, [key]: value };
+  }
+
+  function setParticipantValue(index: number, key: string, value: string) {
+    const list = [...draft.value.participants];
+    const current = list[index];
+    if (!current) return;
+    list[index] = { ...current, [key]: value };
+    draft.value.participants = list;
+  }
+
+  function setRoomType(id: string | null) {
+    draft.value.roomTypeId = id;
+    draft.value.units = 1;
+    syncParticipants();
+  }
+
+  function setUnits(units: number) {
+    draft.value.units = units;
+    syncParticipants();
+  }
+
+  function setAddons(map: Record<string, boolean>) {
+    draft.value.addons = map;
   }
 
   function setResult(data: SignupResult | null) {
     result.value = data;
   }
 
-  /** 從價格頁按「返回修改」時用：保留表單，只清掉結果 */
   function clearResult() {
     result.value = null;
   }
 
-  /** 完整重來（回活動列表用） */
   function reset() {
     currentEvent.value = null;
-    form.value = emptyForm();
+    draft.value = blankDraft();
     result.value = null;
   }
 
   return {
     events,
     currentEvent,
-    form,
+    draft,
     result,
-    selectedRoomType,
-    isFormComplete,
-    hasResult,
+    schema,
+    selectedRoom,
+    requiredParticipants,
+    needsAccommodation,
     setEvents,
     setCurrentEvent,
-    updateForm,
+    syncParticipants,
+    setContactValue,
+    setParticipantValue,
+    setRoomType,
+    setUnits,
+    setAddons,
     setResult,
     clearResult,
     reset,

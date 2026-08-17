@@ -40,3 +40,9 @@ export function maskPhone(phone: string): string {
   if (phone.length < 10) return phone;
   return `${phone.slice(0, 4)}***${phone.slice(7)}`;
 }
+
+/** 遮住身分證中間四碼：A123456789 → A12****789 */
+export function maskTwId(id: string): string {
+  if (id.length < 10) return id;
+  return `${id.slice(0, 3)}****${id.slice(7)}`;
+}

@@ -1,34 +1,52 @@
-// ── 版面變數 ──────────────────────────────────────────────
-// 一般（獨立開啟）版面：左右留白 + 圓角卡片
-// 嵌入（Google Sites iframe）版面：左右 padding 收成 0、卡片切齊、不要圓角
+// ── 設計語彙 ──────────────────────────────────────────────
+// 黑白為主軸：白底、黑字、細線分層。
+// 不用漸層色塊、不用圓角、不用陰影 —— 層次全部靠字級、字距與 1px 細線。
 :root {
-  --shell-max-width: 900px;
-  --shell-pad-x: 16px;
-  --shell-pad-top: 20px;
-  --shell-pad-bottom: 40px;
-  --card-radius: 14px;
-  --card-gap: 14px;
-  --page-bg: #f5f6f4;
+  --shell-max-width: 940px;
+  --shell-pad-x: 24px;
+  --shell-pad-top: 32px;
+  --shell-pad-bottom: 64px;
+
+  // 內容自身的左右留白（與外框 padding 分開，嵌入時外框收 0，這個保留）
+  --content-pad-x: 24px;
+
+  // 頁首／breadcrumb 用：對齊卡片「外框」，不要再往內縮一層。
+  // .page-shell 已經給過 --shell-pad-x，所以獨立版是 0；
+  // 嵌入版 --shell-pad-x 為 0，這裡才需要補回留白避免貼邊。
+  --edge-pad-x: 0px;
+
+  --page-bg: #ffffff;
   --card-bg: #ffffff;
-  --hairline: rgba(0, 0, 0, 0.08);
-  --text-muted: rgba(0, 0, 0, 0.58);
+  --ink: #333333;
+  --ink-soft: #3d3d3d;
+  --text-muted: #6b6b6b;
+  --hairline: rgba(0, 0, 0, 0.14);
+  --hairline-strong: rgba(0, 0, 0, 0.72);
+  --tint: #f6f5f3;
+
+  --card-radius: 0px;
+  --card-gap: 16px;
 }
 
+// 嵌入 Google Sites：外框左右 padding 收成 0，卡片切齊邊緣
 body.is-embedded {
   --shell-max-width: 100%;
   --shell-pad-x: 0px;
   --shell-pad-top: 0px;
-  --shell-pad-bottom: 24px;
-  --card-radius: 0px;
-  --card-gap: 8px;
-  --page-bg: #ffffff;
+  --shell-pad-bottom: 32px;
+  --content-pad-x: 18px;
+  --edge-pad-x: 18px;
+  --card-gap: 0px;
 }
 
 body {
   background: var(--page-bg);
+  color: var(--ink);
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-// 嵌入時 iframe 高度是 Google Sites 給的，不要再長出自己的捲軸底色差異
 body.is-embedded .q-layout,
 body.is-embedded .q-page-container,
 body.is-embedded .q-page {
@@ -36,7 +54,6 @@ body.is-embedded .q-page {
 }
 
 // ── 共用容器 ──────────────────────────────────────────────
-// 所有頁面內容都包在 .page-shell 裡，左右 padding 只由這裡控制
 .page-shell {
   width: 100%;
   max-width: var(--shell-max-width);
@@ -44,12 +61,11 @@ body.is-embedded .q-page {
   padding: var(--shell-pad-top) var(--shell-pad-x) var(--shell-pad-bottom);
 }
 
-// 卡片：嵌入時貼齊左右邊，但內容自己還是有 padding，字不會黏在邊上
+// 區塊：白底 + 細線，不用陰影與圓角
 .surface-card {
   background: var(--card-bg);
   border-radius: var(--card-radius);
   border: 1px solid var(--hairline);
-  overflow: hidden;
 
   body.is-embedded & {
     border-left: none;
@@ -57,38 +73,63 @@ body.is-embedded .q-page {
   }
 }
 
-.section-title {
-  font-size: 15px;
+// ── 字級 ──────────────────────────────────────────────────
+// 小標籤：大字距、灰色、極小字 —— 撐起「標籤化資訊」的層次
+.eyebrow {
+  font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  margin: 0 0 10px;
+  letter-spacing: 0.16em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0 0 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--hairline);
 }
 
 .text-muted {
   color: var(--text-muted);
 }
 
-// 頁面標題區（嵌入時沒有 header，靠這塊撐起識別）
+// 頁面標題區
 .page-heading {
-  padding: 18px var(--content-pad-x, 16px) 14px;
+  padding: 4px var(--edge-pad-x) 22px;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: var(--card-gap);
 
   &__title {
-    font-size: 22px;
+    font-size: 30px;
     font-weight: 800;
-    line-height: 1.25;
-    margin: 0;
+    line-height: 1.18;
+    letter-spacing: -0.02em;
+    margin: 8px 0 0;
   }
 
   &__desc {
-    margin: 6px 0 0;
-    font-size: 13.5px;
+    margin: 8px 0 0;
+    font-size: 14px;
+    line-height: 1.7;
     color: var(--text-muted);
   }
 }
 
-// 嵌入時「內容」的水平留白改由這個變數控制（外框 padding 已為 0）
-:root {
-  --content-pad-x: 16px;
+// ── 元件微調 ──────────────────────────────────────────────
+// 方角按鈕、拉開字距，去掉 Quasar 預設的圓角與大寫轉換
+.q-btn {
+  border-radius: 0;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+// 輸入框改為方角
+.q-field--outlined .q-field__control {
+  border-radius: 0;
 }
 
 // 底部固定的送出列
@@ -97,7 +138,7 @@ body.is-embedded .q-page {
   bottom: 0;
   z-index: 5;
   background: var(--card-bg);
-  border-top: 1px solid var(--hairline);
-  padding: 12px var(--content-pad-x);
-  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--hairline-strong);
+  padding: 14px var(--content-pad-x);
+  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
 }

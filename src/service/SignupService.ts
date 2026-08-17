@@ -1,13 +1,8 @@
 import { apiGet, apiPost } from './api';
 import { loadMockEventList } from 'src/lib/MockData';
 import { IS_DEMO_MODE } from 'src/stores/config-store';
-import type {
-  EventItem,
-  PriceBreakdownItem,
-  SignupForm,
-  SignupResult,
-  RoomType,
-} from 'src/types/signup';
+import { calcBreakdown, sumBreakdown } from 'src/lib/pricing';
+import type { EventItem, SignupDraft, SignupResult } from 'src/types/signup';
 
 export async function fetchEventList(): Promise<EventItem[]> {
   if (IS_DEMO_MODE) return loadMockEventList();
@@ -22,40 +17,6 @@ export async function fetchEventById(id: string): Promise<EventItem | null> {
   return apiGet<EventItem>(`/events/${id}`);
 }
 
-/** 是否還在早鳥期間 */
-function isEarlyBird(event: EventItem): boolean {
-  if (!event.earlyBirdDiscount || !event.earlyBirdDeadline) return false;
-  const deadline = new Date(`${event.earlyBirdDeadline}T23:59:59`).getTime();
-  if (Number.isNaN(deadline)) return false;
-  return Date.now() <= deadline;
-}
-
-/** 價格試算：本來會在後端算，demo 先在前端算一份一樣的邏輯 */
-export function calcPrice(event: EventItem, roomType: RoomType): PriceBreakdownItem[] {
-  const items: PriceBreakdownItem[] = [
-    {
-      label: '活動報名費',
-      note: '含講義、保險與全程餐食',
-      amount: event.basePrice,
-    },
-    {
-      label: `住宿費－${roomType.name}`,
-      note: roomType.price === 0 ? '未選擇住宿' : `${roomType.capacity} 人房 / 每人`,
-      amount: roomType.price,
-    },
-  ];
-
-  if (isEarlyBird(event)) {
-    items.push({
-      label: '早鳥優惠',
-      note: `${event.earlyBirdDeadline} 前完成報名`,
-      amount: -event.earlyBirdDiscount,
-    });
-  }
-
-  return items;
-}
-
 function makeOrderNo(): string {
   const now = new Date();
   const ymd = [
@@ -63,31 +24,37 @@ function makeOrderNo(): string {
     `${now.getMonth() + 1}`.padStart(2, '0'),
     `${now.getDate()}`.padStart(2, '0'),
   ].join('');
-  const seq = `${Math.floor(Math.random() * 9000) + 1000}`;
-  return `TN${ymd}-${seq}`;
+  return `TN${ymd}-${Math.floor(Math.random() * 9000) + 1000}`;
 }
 
-export async function submitSignup(form: SignupForm): Promise<SignupResult> {
+export async function submitSignup(draft: SignupDraft): Promise<SignupResult> {
   if (!IS_DEMO_MODE) {
-    return apiPost<SignupResult>('/signups', form);
+    return apiPost<SignupResult>('/signups', draft);
   }
 
-  const event = await fetchEventById(form.eventId);
+  // demo：模擬後端處理時間，讓送出中的 loading 狀態看得出來
+  await new Promise((resolve) => setTimeout(resolve, 5000));
+
+  const event = await fetchEventById(draft.eventId);
   if (!event) throw new Error('找不到這個活動，請回上一頁重新選擇。');
 
-  const roomType = event.roomTypes.find((r) => r.id === form.roomTypeId);
-  if (!roomType) throw new Error('請先選擇房型。');
+  const room =
+    event.registration.roomTypes.find((r) => r.id === draft.roomTypeId) ?? null;
+  if (event.registration.requiresAccommodation && !room) {
+    throw new Error('請先選擇房型。');
+  }
 
-  const breakdown = calcPrice(event, roomType);
-  const total = breakdown.reduce((sum, item) => sum + item.amount, 0);
+  const breakdown = calcBreakdown(event, draft);
 
   return {
     orderNo: makeOrderNo(),
     createdAt: new Date().toISOString(),
     event,
-    roomType,
-    form: { ...form },
+    roomType: room,
+    // 不能用 structuredClone：傳進來的是 Vue 的 reactive Proxy，會丟 DataCloneError。
+    // draft 全是 JSON 安全的純資料，走 JSON 深拷貝最單純。
+    draft: JSON.parse(JSON.stringify(draft)) as SignupDraft,
     breakdown,
-    total,
+    total: sumBreakdown(breakdown),
   };
 }

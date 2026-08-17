@@ -105,6 +105,32 @@ export const useSignupStore = defineStore('signup', () => {
     draft.value.participants = list;
   }
 
+  /**
+   * 用後端回報的真實剩餘量覆蓋 JSON 裡的靜態數字。
+   * 若使用者已選的房型名額變少甚至滿了，一併把選擇收回來，
+   * 避免畫面顯示「剩 0 間」卻還停在已選狀態。
+   */
+  function applyAvailability(map: Record<string, number>) {
+    const event = currentEvent.value;
+    if (!event) return;
+
+    for (const room of event.registration.roomTypes) {
+      const next = map[room.id];
+      if (typeof next === 'number') room.available = next;
+    }
+
+    const room = selectedRoom.value;
+    if (!room) return;
+
+    if (room.available <= 0) {
+      draft.value.roomTypeId = null;
+      draft.value.units = 1;
+    } else if (draft.value.units > room.available) {
+      draft.value.units = room.available;
+    }
+    syncParticipants();
+  }
+
   function setRoomType(id: string | null) {
     draft.value.roomTypeId = id;
     draft.value.units = 1;
@@ -145,6 +171,7 @@ export const useSignupStore = defineStore('signup', () => {
     needsAccommodation,
     setEvents,
     setCurrentEvent,
+    applyAvailability,
     syncParticipants,
     setContactValue,
     setParticipantValue,

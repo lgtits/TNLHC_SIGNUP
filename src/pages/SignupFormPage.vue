@@ -67,7 +67,12 @@
 
           <!-- 2. 房型 -->
           <section v-if="schema.requiresAccommodation" class="surface-card signup-page__block">
-            <h2 class="section-title">選擇房型 <span class="text-negative">*</span></h2>
+            <h2 class="section-title">
+              選擇房型 <span class="text-negative">*</span>
+              <span v-if="isSyncingQuota" class="signup-page__syncing">
+                <q-spinner size="12px" /> 名額更新中
+              </span>
+            </h2>
             <RoomTypePicker
               :model-value="store.draft.roomTypeId"
               :units="store.draft.units"
@@ -216,7 +221,7 @@ const $q = useQuasar();
 const router = useRouter();
 const store = useSignupStore();
 const config = useConfigStore();
-const { isLoading, error, load } = useEventDetail();
+const { isLoading, isSyncingQuota, error, load, syncQuota } = useEventDetail();
 
 const formRef = ref<QForm | null>(null);
 const isSubmitting = ref(false);
@@ -306,7 +311,10 @@ async function confirmSubmit() {
       type: 'negative',
       message: err instanceof Error ? err.message : '送出失敗，請稍後再試',
       position: 'top',
+      timeout: 6000,
     });
+    // 失敗常是名額被別人搶走，重新抓一次讓畫面回到真實狀態
+    await syncQuota();
   } finally {
     isSubmitting.value = false;
   }
@@ -428,6 +436,17 @@ async function confirmSubmit() {
     font-size: 12px;
     font-weight: 600;
     color: var(--q-primary);
+  }
+
+  &__syncing {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: 8px;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
   }
 
   &__error {

@@ -1,5 +1,5 @@
 <template>
-  <q-layout view="hHh lpR fFf">
+  <q-layout view="hHh lpR fff">
     <!-- 嵌入 Google Sites 時不顯示 header / footer，版面交給外層網頁 -->
     <q-header v-if="!isEmbedded" class="main-header">
       <q-toolbar class="main-toolbar">
@@ -14,12 +14,14 @@
       <router-view />
     </q-page-container>
 
-    <q-footer v-if="!isEmbedded" class="main-footer">
+    <!-- 用一般 footer 而不是 QFooter：QFooter 在 QLayout 裡固定是 fixed，
+         會一直浮在畫面底部。這裡要它跟著內容流到頁尾。 -->
+    <footer v-if="!isEmbedded" class="main-footer">
       <div class="main-footer__inner">
         <img :src="logoSrc" alt="" class="main-footer__logo" />
         <span>© {{ year }} 世界之光聖教會</span>
       </div>
-    </q-footer>
+    </footer>
   </q-layout>
 </template>
 

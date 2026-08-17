@@ -12,9 +12,13 @@ import type { EmbedMode } from 'src/lib/useEmbed';
 export let IS_DEMO_MODE = true;
 export let API_BASE_URL = '';
 
+/** Google Apps Script Web App 的網址（部署後取得，貼進 config.json） */
+export let SHEET_API_URL = '';
+
 interface RawConfig {
   IS_DEMO_MODE?: unknown;
   API_BASE_URL?: unknown;
+  SHEET_API_URL?: unknown;
   EMBED_MODE?: unknown;
   SHOW_EVENT_TAGS?: unknown;
   SHOW_PRICE_NOTE?: unknown;
@@ -24,6 +28,7 @@ export const useConfigStore = defineStore('config', () => {
   // ── State ──────────────────────────────────
   const isDemoMode = ref(true);
   const apiBaseUrl = ref('');
+  const sheetApiUrl = ref('');
   const EMBED_MODE = ref<EmbedMode>('auto');
   const SHOW_EVENT_TAGS = ref(true);
   const SHOW_PRICE_NOTE = ref(true);
@@ -46,6 +51,10 @@ export const useConfigStore = defineStore('config', () => {
           apiBaseUrl.value = data.API_BASE_URL;
           API_BASE_URL = data.API_BASE_URL;
         }
+        if (typeof data.SHEET_API_URL === 'string') {
+          sheetApiUrl.value = data.SHEET_API_URL;
+          SHEET_API_URL = data.SHEET_API_URL;
+        }
         if (data.EMBED_MODE === 'auto' || data.EMBED_MODE === 'always' || data.EMBED_MODE === 'never') {
           EMBED_MODE.value = data.EMBED_MODE;
         }
@@ -66,6 +75,7 @@ export const useConfigStore = defineStore('config', () => {
   return {
     isDemoMode,
     apiBaseUrl,
+    sheetApiUrl,
     EMBED_MODE,
     SHOW_EVENT_TAGS,
     SHOW_PRICE_NOTE,

@@ -1,5 +1,9 @@
 import { ref } from 'vue';
-import { fetchEventById, fetchEventList } from 'src/service/SignupService';
+import {
+  fetchAvailability,
+  fetchEventById,
+  fetchEventList,
+} from 'src/service/SignupService';
 import { useSignupStore } from 'src/stores/signup-store';
 
 /** 活動列表：負責 loading / error 狀態，資料落在 signup store */
@@ -29,7 +33,24 @@ export function useEventList() {
 export function useEventDetail() {
   const signupStore = useSignupStore();
   const isLoading = ref(false);
+  const isSyncingQuota = ref(false);
   const error = ref<string | null>(null);
+
+  /**
+   * 名額同步。失敗不擋報名流程 —— 送出時後端還會再檢查一次，
+   * 這裡只是讓畫面盡量顯示真實數字。
+   */
+  async function syncQuota() {
+    isSyncingQuota.value = true;
+    try {
+      const map = await fetchAvailability();
+      if (Object.keys(map).length > 0) signupStore.applyAvailability(map);
+    } catch (err) {
+      console.warn('[quota] 名額同步失敗，改用資料檔中的數字', err);
+    } finally {
+      isSyncingQuota.value = false;
+    }
+  }
 
   async function load(eventId: string) {
     isLoading.value = true;
@@ -39,6 +60,7 @@ export function useEventDetail() {
     if (cached) {
       signupStore.setCurrentEvent(cached);
       isLoading.value = false;
+      await syncQuota();
       return;
     }
 
@@ -52,10 +74,13 @@ export function useEventDetail() {
       signupStore.setCurrentEvent(event);
     } catch (err) {
       error.value = err instanceof Error ? err.message : '活動資料載入失敗';
+      return;
     } finally {
       isLoading.value = false;
     }
+
+    await syncQuota();
   }
 
-  return { isLoading, error, load };
+  return { isLoading, isSyncingQuota, error, load, syncQuota };
 }

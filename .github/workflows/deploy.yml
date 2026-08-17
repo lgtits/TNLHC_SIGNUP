@@ -1,0 +1,52 @@
+name: Deploy to GitHub Pages
+
+# 使用前先到 repo Settings → Pages → Source 選 "GitHub Actions"
+# （不是 "Deploy from a branch"，這個 workflow 不需要 gh-pages 分支）
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # 允許在 Actions 頁面手動觸發
+
+# GITHUB_TOKEN 是 Actions 自動注入的，不用自己建 secret，
+# 只要在這裡宣告它需要的權限即可。
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同時間只跑一個部署，新的推上來就取消還在排隊的舊的
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # npm ci 會自動跑 package.json 的 prepare script（quasar prepare），
+      # 產生 .quasar/ 下的 tsconfig 與型別檔
+      - run: npm ci
+
+      - run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist/spa
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

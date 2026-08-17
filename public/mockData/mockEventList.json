@@ -1,0 +1,166 @@
+[
+  {
+    "id": "evt-2026-autumn-retreat",
+    "title": "2026 秋季靈修營",
+    "subtitle": "三天兩夜．重新得力",
+    "coverFrom": "#2f6f5e",
+    "coverTo": "#5fbfa1",
+    "icon": "self_improvement",
+    "startDate": "2026-09-25",
+    "endDate": "2026-09-27",
+    "location": "南投．清境會館",
+    "description": "遠離喧囂三天兩夜，透過晨禱、專題與小組分享重新調整生活節奏。含全程餐食、保險與接駁車。",
+    "basePrice": 2800,
+    "earlyBirdDiscount": 400,
+    "earlyBirdDeadline": "2026-08-31",
+    "tags": ["三天兩夜", "含餐", "提供接駁"],
+    "status": "open",
+    "roomTypes": [
+      {
+        "id": "room-single",
+        "name": "單人房",
+        "description": "一大床，獨立衛浴，適合需要安靜獨處的人",
+        "capacity": 1,
+        "price": 3200,
+        "quota": 4
+      },
+      {
+        "id": "room-double",
+        "name": "雙人房",
+        "description": "兩小床，獨立衛浴，可指定同房夥伴",
+        "capacity": 2,
+        "price": 2200,
+        "quota": 12
+      },
+      {
+        "id": "room-quad",
+        "name": "四人房",
+        "description": "上下舖，共用樓層衛浴，最超值的選擇",
+        "capacity": 4,
+        "price": 1400,
+        "quota": 20
+      }
+    ]
+  },
+  {
+    "id": "evt-2026-family-camp",
+    "title": "2026 親子家庭營",
+    "subtitle": "全家一起放電的週末",
+    "coverFrom": "#c98b4b",
+    "coverTo": "#f0c088",
+    "icon": "family_restroom",
+    "startDate": "2026-10-10",
+    "endDate": "2026-10-11",
+    "location": "宜蘭．冬山河親水營地",
+    "description": "為學齡家庭設計的兩天一夜，白天有闖關遊戲與手作，晚上有營火晚會。12 歲以下孩童半價。",
+    "basePrice": 1800,
+    "earlyBirdDiscount": 200,
+    "earlyBirdDeadline": "2026-09-15",
+    "tags": ["兩天一夜", "適合親子", "戶外活動"],
+    "status": "almost_full",
+    "roomTypes": [
+      {
+        "id": "room-family-4",
+        "name": "家庭四人房",
+        "description": "兩大床，獨立衛浴，附小客廳",
+        "capacity": 4,
+        "price": 1800,
+        "quota": 6
+      },
+      {
+        "id": "room-family-6",
+        "name": "家庭六人房",
+        "description": "通舖型，適合三代同行或兩個小家庭",
+        "capacity": 6,
+        "price": 1300,
+        "quota": 3
+      },
+      {
+        "id": "room-tent",
+        "name": "營地帳篷",
+        "description": "現成帳篷含睡墊，共用衛浴，孩子最愛",
+        "capacity": 4,
+        "price": 800,
+        "quota": 10
+      }
+    ]
+  },
+  {
+    "id": "evt-2026-youth-winter",
+    "title": "2026 青年冬令會",
+    "subtitle": "跨年不留白",
+    "coverFrom": "#3a5ad5",
+    "coverTo": "#7fa8ff",
+    "icon": "local_fire_department",
+    "startDate": "2026-12-30",
+    "endDate": "2027-01-01",
+    "location": "台中．谷關教育中心",
+    "description": "16-30 歲青年專屬。三天兩夜的信息、詩歌與跨年守夜，一起用最有意義的方式迎接新的一年。",
+    "basePrice": 2400,
+    "earlyBirdDiscount": 0,
+    "earlyBirdDeadline": "",
+    "tags": ["16-30 歲", "跨年", "含餐"],
+    "status": "open",
+    "roomTypes": [
+      {
+        "id": "room-dorm-6",
+        "name": "六人房",
+        "description": "上下舖，房內衛浴，同性別分房",
+        "capacity": 6,
+        "price": 1200,
+        "quota": 24
+      },
+      {
+        "id": "room-dorm-8",
+        "name": "八人通舖",
+        "description": "和室通舖，共用樓層衛浴，價格最親民",
+        "capacity": 8,
+        "price": 900,
+        "quota": 32
+      }
+    ]
+  },
+  {
+    "id": "evt-2026-worship-workshop",
+    "title": "敬拜團隊進修工作坊",
+    "subtitle": "單日不過夜也可報名",
+    "coverFrom": "#7a5bd6",
+    "coverTo": "#b79bff",
+    "icon": "music_note",
+    "startDate": "2026-11-08",
+    "endDate": "2026-11-09",
+    "location": "台北．信義音樂中心",
+    "description": "分器樂、主領、音控三軌進修。可選擇當日往返或住宿一晚，隔天上午加開合班排練。",
+    "basePrice": 1500,
+    "earlyBirdDiscount": 150,
+    "earlyBirdDeadline": "2026-10-20",
+    "tags": ["可單日", "分軌課程", "限額 60 人"],
+    "status": "open",
+    "roomTypes": [
+      {
+        "id": "room-none",
+        "name": "不需住宿（當日往返）",
+        "description": "只參加白天課程，不含住宿與早餐",
+        "capacity": 1,
+        "price": 0,
+        "quota": 30
+      },
+      {
+        "id": "room-twin",
+        "name": "雙人房",
+        "description": "鄰近會場的合作旅店，含早餐",
+        "capacity": 2,
+        "price": 1600,
+        "quota": 10
+      },
+      {
+        "id": "room-solo",
+        "name": "單人房",
+        "description": "鄰近會場的合作旅店，含早餐",
+        "capacity": 1,
+        "price": 2400,
+        "quota": 5
+      }
+    ]
+  }
+]

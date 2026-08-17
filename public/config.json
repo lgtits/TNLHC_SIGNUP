@@ -1,0 +1,7 @@
+{
+  "IS_DEMO_MODE": true,
+  "API_BASE_URL": "",
+  "EMBED_MODE": "auto",
+  "SHOW_EVENT_TAGS": true,
+  "SHOW_PRICE_NOTE": true
+}

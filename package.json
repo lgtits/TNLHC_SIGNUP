@@ -1,0 +1,32 @@
+{
+  "name": "tnlhc-signup",
+  "version": "0.1.0",
+  "description": "TNLHC 活動報名系統（可嵌入 Google Sites）",
+  "productName": "TNLHC 報名系統",
+  "author": "tnlhc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "quasar dev",
+    "build": "quasar build",
+    "prepare": "quasar prepare",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@quasar/extras": "^1.17.0",
+    "pinia": "^3.0.0",
+    "quasar": "^2.18.0",
+    "vue": "^3.5.0",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@quasar/app-vite": "^2.3.0",
+    "autoprefixer": "^10.4.20",
+    "sass-embedded": "^1.83.0",
+    "typescript": "~5.7.0",
+    "vue-tsc": "^2.2.0"
+  },
+  "engines": {
+    "node": "^28 || ^26 || ^24 || ^22 || ^20"
+  }
+}

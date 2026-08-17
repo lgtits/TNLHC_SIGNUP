@@ -1,0 +1,103 @@
+// ── 版面變數 ──────────────────────────────────────────────
+// 一般（獨立開啟）版面：左右留白 + 圓角卡片
+// 嵌入（Google Sites iframe）版面：左右 padding 收成 0、卡片切齊、不要圓角
+:root {
+  --shell-max-width: 900px;
+  --shell-pad-x: 16px;
+  --shell-pad-top: 20px;
+  --shell-pad-bottom: 40px;
+  --card-radius: 14px;
+  --card-gap: 14px;
+  --page-bg: #f5f6f4;
+  --card-bg: #ffffff;
+  --hairline: rgba(0, 0, 0, 0.08);
+  --text-muted: rgba(0, 0, 0, 0.58);
+}
+
+body.is-embedded {
+  --shell-max-width: 100%;
+  --shell-pad-x: 0px;
+  --shell-pad-top: 0px;
+  --shell-pad-bottom: 24px;
+  --card-radius: 0px;
+  --card-gap: 8px;
+  --page-bg: #ffffff;
+}
+
+body {
+  background: var(--page-bg);
+}
+
+// 嵌入時 iframe 高度是 Google Sites 給的，不要再長出自己的捲軸底色差異
+body.is-embedded .q-layout,
+body.is-embedded .q-page-container,
+body.is-embedded .q-page {
+  background: var(--page-bg);
+}
+
+// ── 共用容器 ──────────────────────────────────────────────
+// 所有頁面內容都包在 .page-shell 裡，左右 padding 只由這裡控制
+.page-shell {
+  width: 100%;
+  max-width: var(--shell-max-width);
+  margin: 0 auto;
+  padding: var(--shell-pad-top) var(--shell-pad-x) var(--shell-pad-bottom);
+}
+
+// 卡片：嵌入時貼齊左右邊，但內容自己還是有 padding，字不會黏在邊上
+.surface-card {
+  background: var(--card-bg);
+  border-radius: var(--card-radius);
+  border: 1px solid var(--hairline);
+  overflow: hidden;
+
+  body.is-embedded & {
+    border-left: none;
+    border-right: none;
+  }
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin: 0 0 10px;
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+// 頁面標題區（嵌入時沒有 header，靠這塊撐起識別）
+.page-heading {
+  padding: 18px var(--content-pad-x, 16px) 14px;
+
+  &__title {
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.25;
+    margin: 0;
+  }
+
+  &__desc {
+    margin: 6px 0 0;
+    font-size: 13.5px;
+    color: var(--text-muted);
+  }
+}
+
+// 嵌入時「內容」的水平留白改由這個變數控制（外框 padding 已為 0）
+:root {
+  --content-pad-x: 16px;
+}
+
+// 底部固定的送出列
+.sticky-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  background: var(--card-bg);
+  border-top: 1px solid var(--hairline);
+  padding: 12px var(--content-pad-x);
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}

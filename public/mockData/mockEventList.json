@@ -79,7 +79,7 @@
           "bookingUnit": "room",
           "capacity": 4,
           "available": 2,
-          "pricePerPerson": 750
+          "pricePerPerson": 375
         },
         {
           "id": "room-303",
@@ -88,7 +88,7 @@
           "bookingUnit": "room",
           "capacity": 6,
           "available": 1,
-          "pricePerPerson": 670
+          "pricePerPerson": 335
         },
         {
           "id": "room-304-306",
@@ -97,7 +97,7 @@
           "bookingUnit": "room",
           "capacity": 5,
           "available": 3,
-          "pricePerPerson": 800
+          "pricePerPerson": 400
         },
         {
           "id": "room-307",
@@ -106,7 +106,7 @@
           "bookingUnit": "room",
           "capacity": 4,
           "available": 1,
-          "pricePerPerson": 880
+          "pricePerPerson": 440
         },
         {
           "id": "room-308",
@@ -115,7 +115,7 @@
           "bookingUnit": "room",
           "capacity": 2,
           "available": 1,
-          "pricePerPerson": 1150,
+          "pricePerPerson": 575,
           "note": ""
         },
         {
@@ -125,7 +125,7 @@
           "bookingUnit": "room",
           "capacity": 5,
           "available": 1,
-          "pricePerPerson": 700,
+          "pricePerPerson": 350,
           "note": ""
         },
         {
@@ -135,7 +135,7 @@
           "bookingUnit": "room",
           "capacity": 4,
           "available": 4,
-          "pricePerPerson": 650,
+          "pricePerPerson": 325,
           "note": ""
         }
       ],

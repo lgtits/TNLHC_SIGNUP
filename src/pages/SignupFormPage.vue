@@ -75,9 +75,7 @@
               @update:model-value="store.setRoomType"
               @update:units="store.setUnits"
             />
-            <p v-if="roomError" class="signup-page__error">
-              <q-icon name="error" size="15px" /> 請選擇一個房型
-            </p>
+            <p v-if="roomError" class="signup-page__error">請選擇一個房型</p>
             <p class="signup-page__note">
               通鋪以「床位」計價，訂幾個床位就填幾位參加者資料；一般房型以「整間」計價，
               需填寫該房間所有入住者的資料（保險用）。
@@ -152,7 +150,6 @@
               class="full-width"
               :loading="isSubmitting"
               label="送出報名"
-              icon-right="arrow_forward"
             />
           </div>
         </q-form>

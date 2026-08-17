@@ -28,7 +28,6 @@
         <p v-if="addon.description" class="addon-item__desc">{{ addon.description }}</p>
 
         <p v-if="addon.freeUnderAge" class="addon-item__free">
-          <q-icon name="child_care" size="14px" />
           {{ addon.freeUnderAge }} 歲以下免費（依填寫的出生年月日自動判定）
         </p>
       </div>

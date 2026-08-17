@@ -45,9 +45,7 @@
     :rules="rules"
     lazy-rules
     @update:model-value="onInput"
-  >
-    <template #prepend><q-icon name="cake" /></template>
-  </q-input>
+  />
 
   <!-- 其餘一律 text input，差別在 inputmode / 正規化 -->
   <q-input
@@ -63,9 +61,7 @@
     :rules="rules"
     lazy-rules
     @update:model-value="onInput"
-  >
-    <template v-if="icon" #prepend><q-icon :name="icon" /></template>
-  </q-input>
+  />
 </template>
 
 <script setup lang="ts">
@@ -97,21 +93,6 @@ const inputMode = computed(() => {
       return 'email';
     default:
       return 'text';
-  }
-});
-
-const icon = computed(() => {
-  switch (props.field.type) {
-    case 'tel':
-      return 'smartphone';
-    case 'email':
-      return 'mail';
-    case 'twid':
-      return 'badge';
-    case 'text':
-      return 'person';
-    default:
-      return '';
   }
 });
 

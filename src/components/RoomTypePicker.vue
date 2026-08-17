@@ -29,12 +29,8 @@
 
         <div class="room-option__meta">
           <!-- 通鋪：算床位；房間：算間數 -->
-          <span :class="stockClass(room)">
-            <q-icon :name="room.bookingUnit === 'bed' ? 'single_bed' : 'meeting_room'" size="15px" />
-            {{ stockText(room) }}
-          </span>
+          <span :class="stockClass(room)">{{ stockText(room) }}</span>
           <span v-if="room.bookingUnit === 'room'">
-            <q-icon name="payments" size="15px" />
             整間 {{ formatPrice(room.pricePerPerson * room.capacity) }}
           </span>
         </div>

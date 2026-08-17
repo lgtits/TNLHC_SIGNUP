@@ -22,7 +22,7 @@ export default defineConfig((ctx) => {
         strict: true,
         vueShim: true,
       },
-      vueRouterMode: 'hash',
+      vueRouterMode: 'history',
       // 注意：這裡不能用 './'，Quasar 會把它正規化成 '/'，
       // 部署到 GitHub Pages 子路徑時 assets 會全部 404。
       publicPath: ctx.prod ? GH_PAGES_BASE : '/',

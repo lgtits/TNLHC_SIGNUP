@@ -21,6 +21,7 @@
             <q-badge v-if="!addon.optional" color="grey-7" class="q-ml-xs">必收</q-badge>
           </span>
           <span class="addon-item__price">
+            <small class="addon-item__price-prefix">補助後</small>
             {{ formatPrice(addon.price) }}<small>/{{ addon.per === 'per_person' ? '人' : '筆' }}</small>
           </span>
         </div>
@@ -105,6 +106,11 @@ function onToggle(id: string, value: boolean) {
       font-weight: 600;
       opacity: 0.75;
     }
+  }
+
+  &__price-prefix {
+    margin-right: 3px;
+    letter-spacing: 0.04em;
   }
 
   &__desc {

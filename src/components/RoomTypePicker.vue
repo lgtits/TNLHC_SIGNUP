@@ -12,7 +12,7 @@
         :disable="room.available <= 0"
         dense
         color="primary"
-        @update:model-value="onPick"
+        @update:model-value="() => onPick(room)"
       />
 
       <div class="room-option__main">
@@ -21,7 +21,11 @@
             {{ room.name }}
             <q-badge v-if="room.priority" color="secondary" class="q-ml-xs">尊榮優先</q-badge>
           </span>
-          <span class="room-option__price">{{ formatPrice(room.pricePerPerson) }}<small>/人</small></span>
+          <!-- 通鋪以床位計價，其餘房型以「整間」計價 -->
+          <span class="room-option__price">
+            <small class="room-option__price-prefix">補助後</small>
+            {{ formatPrice(roomDisplayPrice(room)) }}<small>/{{ priceUnit(room) }}</small>
+          </span>
         </div>
 
         <p class="room-option__bed">{{ room.bedInfo }}</p>
@@ -30,26 +34,28 @@
         <div class="room-option__meta">
           <!-- 通鋪：算床位；房間：算間數 -->
           <span :class="stockClass(room)">{{ stockText(room) }}</span>
-          <span v-if="room.bookingUnit === 'room'">
-            整間 {{ formatPrice(room.pricePerPerson * room.capacity) }}
-          </span>
         </div>
 
-        <!-- 選中之後才問要訂幾個床位 / 幾間 -->
-        <div v-if="modelValue === room.id && maxUnits(room) > 1" class="room-option__units">
-          <span class="room-option__units-label">
-            {{ room.bookingUnit === 'bed' ? '要訂幾個床位？' : '要訂幾間？' }}
-          </span>
-          <q-select
-            :model-value="units"
-            outlined
-            dense
-            emit-value
-            map-options
-            class="room-option__units-select"
-            :options="unitOptions(room)"
-            @update:model-value="onUnits"
-          />
+        <!-- 選中之後才問住幾個人：房間可以少住人，但不能超過床位數 -->
+        <div v-if="modelValue === room.id && maxGuests(room) > 1" class="room-option__units">
+          <div class="room-option__units-row">
+            <span class="room-option__units-label">
+              {{ room.bookingUnit === 'bed' ? '要訂幾個床位？' : '這間房要住幾位？' }}
+            </span>
+            <q-select
+              :model-value="guests"
+              outlined
+              dense
+              emit-value
+              map-options
+              class="room-option__units-select"
+              :options="guestOptions(room)"
+              @update:model-value="onGuests"
+            />
+          </div>
+          <p v-if="room.bookingUnit === 'room'" class="room-option__units-hint">
+            費用以整間計算，可以少住人（最多 {{ room.capacity }} 位），少住不減價。
+          </p>
         </div>
       </div>
     </label>
@@ -59,23 +65,28 @@
 <script setup lang="ts">
 import type { RoomType } from 'src/types/signup';
 import { formatPrice } from 'src/lib/format';
+import { defaultGuests, maxGuests, roomDisplayPrice } from 'src/lib/pricing';
 
-const props = defineProps<{
+defineProps<{
   modelValue: string | null;
-  units: number;
+  guests: number;
   roomTypes: RoomType[];
 }>();
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string | null): void;
-  (e: 'update:units', value: number): void;
+  (e: 'update:guests', value: number): void;
 }>();
+
+function priceUnit(room: RoomType): string {
+  return room.bookingUnit === 'bed' ? '人' : '間';
+}
 
 function stockText(room: RoomType): string {
   if (room.available <= 0) return '已額滿';
   return room.bookingUnit === 'bed'
     ? `剩 ${room.available} / ${room.capacity} 個床位`
-    : `剩 ${room.available} 間・每間 ${room.capacity} 人`;
+    : `剩 ${room.available} 間・每間最多 ${room.capacity} 人`;
 }
 
 function stockClass(room: RoomType) {
@@ -84,26 +95,22 @@ function stockClass(room: RoomType) {
   return low ? 'text-negative' : '';
 }
 
-/** 一次最多能訂多少：通鋪不超過剩餘床位，房間不超過剩餘間數 */
-function maxUnits(room: RoomType): number {
-  return Math.max(1, room.available);
-}
-
-function unitOptions(room: RoomType) {
-  const suffix = room.bookingUnit === 'bed' ? '個床位' : '間';
-  return Array.from({ length: maxUnits(room) }, (_, i) => ({
+function guestOptions(room: RoomType) {
+  const suffix = room.bookingUnit === 'bed' ? '個床位' : '位';
+  return Array.from({ length: maxGuests(room) }, (_, i) => ({
     label: `${i + 1} ${suffix}`,
     value: i + 1,
   }));
 }
 
-function onPick(value: string | null) {
-  emit('update:modelValue', value);
-  emit('update:units', 1);
+/** 選到房型時一併帶出預設人數：房間預設住滿，通鋪預設 1 個床位 */
+function onPick(room: RoomType) {
+  emit('update:modelValue', room.id);
+  emit('update:guests', defaultGuests(room));
 }
 
-function onUnits(value: number) {
-  emit('update:units', value);
+function onGuests(value: number) {
+  emit('update:guests', value);
 }
 </script>
 
@@ -169,6 +176,11 @@ function onUnits(value: number) {
     }
   }
 
+  &__price-prefix {
+    margin-right: 3px;
+    letter-spacing: 0.04em;
+  }
+
   &__bed {
     margin: 4px 0 0;
     font-size: 12.5px;
@@ -198,12 +210,22 @@ function onUnits(value: number) {
   }
 
   &__units {
-    display: flex;
-    align-items: center;
-    gap: 10px;
     margin-top: 12px;
     padding-top: 10px;
     border-top: 1px dashed var(--hairline);
+  }
+
+  &__units-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__units-hint {
+    margin: 8px 0 0;
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--text-muted);
   }
 
   &__units-label {

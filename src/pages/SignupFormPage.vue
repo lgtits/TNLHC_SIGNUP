@@ -75,15 +75,15 @@
             </h2>
             <RoomTypePicker
               :model-value="store.draft.roomTypeId"
-              :units="store.draft.units"
+              :guests="store.draft.guests"
               :room-types="schema.roomTypes"
               @update:model-value="store.setRoomType"
-              @update:units="store.setUnits"
+              @update:guests="store.setGuests"
             />
             <p v-if="roomError" class="signup-page__error">請選擇一個房型</p>
             <p class="signup-page__note">
               通鋪以「床位」計價，訂幾個床位就填幾位參加者資料；一般房型以「整間」計價，
-              需填寫該房間所有入住者的資料（保險用）。
+              可以少住人但不能超過房間床位數，選幾位就填幾位入住者的資料（保險用）。
             </p>
           </section>
 
@@ -257,8 +257,8 @@ const confirmRows = computed(() => {
       label: '房型',
       value:
         room.bookingUnit === 'bed'
-          ? `${room.name}（${store.draft.units} 個床位）`
-          : `${room.name}（${store.draft.units} 間・每間 ${room.capacity} 人）`,
+          ? `${room.name}（${store.draft.guests} 個床位）`
+          : `${room.name}（整間・入住 ${store.draft.guests} / ${room.capacity} 人）`,
     });
   }
 

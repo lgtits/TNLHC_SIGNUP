@@ -21,14 +21,17 @@ var ROOMS = {
   'room-301-302': { unit: 'room', capacity: 4, units: 2, name: '301、302 號房' },
   'room-303': { unit: 'room', capacity: 6, units: 1, name: '303 號房' },
   'room-304-306': { unit: 'room', capacity: 5, units: 3, name: '304、305、306 號房' },
-  'room-307': { unit: 'room', capacity: 4, units: 1, name: '307 號房' },
-  'room-308': { unit: 'room', capacity: 2, units: 1, name: '308 號房' },
   'room-309': { unit: 'room', capacity: 5, units: 1, name: '309 號房' },
-  'room-310-313': { unit: 'room', capacity: 4, units: 4, name: '310、311、312、313 號房' },
+  'room-312-313': { unit: 'room', capacity: 4, units: 2, name: '312、313 號房' },
 };
+// 預先保留、不開放報名：307（莉雅）、308（牧師）、310（林執事）、311（楊老師）
 
 // 聯絡人要獨立成欄的欄位（key 對應前端 contactFields 的 key）
-var CONTACT_COLUMNS = [{ key: 'email', label: '聯絡人 Email' }];
+// 順序＝欄位順序；改動這裡的話，既有的 bookings 工作表要一起調整欄位。
+var CONTACT_COLUMNS = [
+  { key: 'contactName', label: '聯絡人姓名' },
+  { key: 'email', label: '聯絡人 Email' },
+];
 
 // 加購項目各給一欄，有選就打勾，比塞一包 JSON 好讀也好篩選
 var ADDON_COLUMNS = [

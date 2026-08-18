@@ -8,6 +8,7 @@ import type {
   SignupDraft,
   SignupResult,
 } from 'src/types/signup';
+import { defaultGuests, maxGuests } from 'src/lib/pricing';
 
 /** 依欄位定義產生一份空白資料 */
 function blankValues(fields: FieldDef[]): FieldValues {
@@ -19,7 +20,7 @@ function blankDraft(eventId = ''): SignupDraft {
     eventId,
     contact: {},
     roomTypeId: null,
-    units: 1,
+    guests: 1,
     participants: [],
     addons: {},
   };
@@ -41,17 +42,13 @@ export const useSignupStore = defineStore('signup', () => {
   });
 
   /**
-   * 要填幾個人的資料：
-   *   通鋪（bed）  → 訂幾個床位就填幾人
-   *   房間（room）→ 該房型床位數 × 訂幾間
-   *   不需住宿      → 不逐人填寫（0）
+   * 要填幾個人的資料 = 入住人數。
+   * 房間可以少住人（不能多住），所以一律以使用者選的人數為準，不再用房型床位數推算。
    */
   const requiredParticipants = computed(() => {
     const room = selectedRoom.value;
     if (!room || !schema.value?.participantFields.length) return 0;
-    return room.bookingUnit === 'bed'
-      ? draft.value.units
-      : room.capacity * draft.value.units;
+    return draft.value.guests;
   });
 
   const needsAccommodation = computed(() => schema.value?.requiresAccommodation ?? false);
@@ -124,21 +121,27 @@ export const useSignupStore = defineStore('signup', () => {
 
     if (room.available <= 0) {
       draft.value.roomTypeId = null;
-      draft.value.units = 1;
-    } else if (draft.value.units > room.available) {
-      draft.value.units = room.available;
+      draft.value.guests = 1;
+    } else {
+      // 通鋪的上限會隨剩餘床位變動；房間的上限是固定的床位數，不受剩餘間數影響
+      draft.value.guests = Math.min(draft.value.guests, maxGuests(room));
     }
     syncParticipants();
   }
 
+  /** 換房型時，人數回到該房型的預設值（房間＝住滿，通鋪＝1 個床位） */
   function setRoomType(id: string | null) {
     draft.value.roomTypeId = id;
-    draft.value.units = 1;
+    const room = selectedRoom.value;
+    draft.value.guests = room ? defaultGuests(room) : 1;
     syncParticipants();
   }
 
-  function setUnits(units: number) {
-    draft.value.units = units;
+  /** 設定入住人數（房間可以少住人，不能超過床位數） */
+  function setGuests(guests: number) {
+    const room = selectedRoom.value;
+    const limit = room ? Math.max(1, maxGuests(room)) : 1;
+    draft.value.guests = Math.min(Math.max(1, guests), limit);
     syncParticipants();
   }
 
@@ -176,7 +179,7 @@ export const useSignupStore = defineStore('signup', () => {
     setContactValue,
     setParticipantValue,
     setRoomType,
-    setUnits,
+    setGuests,
     setAddons,
     setResult,
     clearResult,

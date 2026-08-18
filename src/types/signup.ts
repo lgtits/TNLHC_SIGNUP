@@ -47,7 +47,8 @@ export type FieldValues = Record<string, string>;
 /**
  * 訂房單位：
  *   bed  → 一次訂「一個床位」（通鋪）。訂幾個床位就填幾個人的資料。
- *   room → 一次訂「整間」。費用算整間，但仍需填實際入住者的資料。
+ *   room → 一次訂「整間」。費用算整間（可以少住人，不能多住人），
+ *          仍需填寫實際入住者的資料。
  */
 export type BookingUnit = 'bed' | 'room';
 
@@ -58,11 +59,15 @@ export interface RoomType {
   bedInfo: string;
   description?: string;
   bookingUnit: BookingUnit;
-  /** 每間可住人數；bookingUnit = 'bed' 時代表總床位數 */
+  /** 每間可住人數（上限，可以少住）；bookingUnit = 'bed' 時代表總床位數 */
   capacity: number;
   /** 剩餘量：bed → 剩幾個床位，room → 剩幾間 */
   available: number;
-  /** 每人費用（room 模式下，整間 = pricePerPerson × capacity） */
+  /**
+   * 每人費用（已含教會補助）。
+   * room 模式下實收 = pricePerPerson × capacity，也就是整間的價格，
+   * 少住人不減價。
+   */
   pricePerPerson: number;
   /** 尊榮優先選擇 */
   priority?: boolean;
@@ -150,8 +155,12 @@ export interface SignupDraft {
   eventId: string;
   contact: FieldValues;
   roomTypeId: string | null;
-  /** bed 模式 = 訂幾個床位；room 模式 = 訂幾間 */
-  units: number;
+  /**
+   * 入住人數。
+   *   bed 模式  → 訂幾個床位（一人一個床位）
+   *   room 模式 → 這間房實際要住幾個人，上限是 capacity；一次固定訂一間
+   */
+  guests: number;
   /** 實際要填資料的參加者 */
   participants: FieldValues[];
   /** addonId → 是否參加 */

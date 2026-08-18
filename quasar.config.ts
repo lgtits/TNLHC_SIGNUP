@@ -1,8 +1,12 @@
 import { defineConfig } from '#q-app/wrappers';
 
-// GitHub Pages 的 project page 掛在 https://<user>.github.io/<repo>/ 底下，
-// 所以 build 出來的資源要帶這層子路徑；本機 dev 則維持根目錄。
-const GH_PAGES_BASE = '/TNLHC_SIGNUP/';
+// 已綁自訂網域 https://events.tnlhc.org/，站台掛在網域根目錄，
+// 所以 publicPath 用 '/'（自訂網域只能對應 repo 根，無法指到 /TNLHC_SIGNUP 子路徑，
+// 而且 <user>.github.io/TNLHC_SIGNUP/ 會被 301 轉到自訂網域）。
+//
+// 若哪天拿掉自訂網域、要回頭用 project page，build 前設環境變數即可：
+//   PUBLIC_PATH=/TNLHC_SIGNUP/ npm run build
+const PUBLIC_PATH = process.env.PUBLIC_PATH || '/';
 
 export default defineConfig((ctx) => {
   return {
@@ -25,7 +29,7 @@ export default defineConfig((ctx) => {
       vueRouterMode: 'history',
       // 注意：這裡不能用 './'，Quasar 會把它正規化成 '/'，
       // 部署到 GitHub Pages 子路徑時 assets 會全部 404。
-      publicPath: ctx.prod ? GH_PAGES_BASE : '/',
+      publicPath: ctx.prod ? PUBLIC_PATH : '/',
     },
 
     devServer: {

@@ -196,8 +196,8 @@ const roomText = computed(() => {
   if (!r?.roomType) return '';
   const room = r.roomType;
   return room.bookingUnit === 'bed'
-    ? `${room.name}（${r.draft.units} 個床位）`
-    : `${room.name}（${r.draft.units} 間・每間 ${room.capacity} 人）`;
+    ? `${room.name}（${r.draft.guests} 個床位）`
+    : `${room.name}（整間・入住 ${r.draft.guests} / ${room.capacity} 人）`;
 });
 
 function displayValue(_field: FieldDef, value: string): string {

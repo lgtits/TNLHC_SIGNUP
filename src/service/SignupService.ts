@@ -1,7 +1,7 @@
 import { apiGet } from './api';
 import { loadMockEventList } from 'src/lib/MockData';
 import { API_BASE_URL, IS_DEMO_MODE, SHEET_API_URL } from 'src/stores/config-store';
-import { calcBreakdown, sumBreakdown } from 'src/lib/pricing';
+import { bookedUnits, calcBreakdown, sumBreakdown } from 'src/lib/pricing';
 import type { EventItem, SignupDraft, SignupResult } from 'src/types/signup';
 
 /**
@@ -92,8 +92,12 @@ export async function submitSignup(draft: SignupDraft): Promise<SignupResult> {
       event.registration.addons.map((a) => [a.id, draft.addons[a.id] ?? a.defaultOn]),
     );
 
+    // 後端是以「名額單位」扣量（通鋪算床位、房間算間數），
+    // 而 draft 存的是入住人數，所以送出前換算成 units 再帶過去。
+    const units = room ? bookedUnits(room, draft.guests) : 0;
+
     // 金額前端算、後端存；名額則完全由後端判定（前端擋不住併發）
-    const res = await postToSheet({ ...draft, addons, total });
+    const res = await postToSheet({ ...draft, addons, units, total });
     if (!res.ok) throw new Error(res.error ?? '報名失敗，請稍後再試。');
 
     return {

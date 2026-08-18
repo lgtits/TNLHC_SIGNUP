@@ -12,12 +12,49 @@ export function participantCount(draft: SignupDraft): number {
   return Math.max(1, draft.participants.length);
 }
 
-/** 住宿費：bed 依床位計，room 依整間計 */
-export function accommodationAmount(room: RoomType, units: number): number {
+/**
+ * 住宿費：
+ *   bed  → 訂幾個床位算幾個
+ *   room → 一律整間計價（可以少住人，不能多住人，少住不減價）
+ */
+export function accommodationAmount(room: RoomType, guests: number): number {
   if (room.bookingUnit === 'bed') {
-    return room.pricePerPerson * units;
+    return room.pricePerPerson * guests;
   }
-  return room.pricePerPerson * room.capacity * units;
+  return room.pricePerPerson * room.capacity;
+}
+
+/**
+ * 這筆報名會佔掉的名額數量，也是送給後端扣量用的數字：
+ *   bed  → 床位數（等於人數）
+ *   room → 間數，一次只訂一間
+ */
+export function bookedUnits(room: RoomType, guests: number): number {
+  return room.bookingUnit === 'bed' ? guests : 1;
+}
+
+/** 房型卡片上要顯示的價格：通鋪是「每個床位」，房間是「整間」 */
+export function roomDisplayPrice(room: RoomType): number {
+  return room.bookingUnit === 'bed'
+    ? room.pricePerPerson
+    : room.pricePerPerson * room.capacity;
+}
+
+/**
+ * 剛選到這個房型時的預設人數：
+ *   room → 該房間本來就設計住幾人（住滿），使用者要少住再自己往下調
+ *   bed  → 一個床位起算
+ */
+export function defaultGuests(room: RoomType): number {
+  return room.bookingUnit === 'bed' ? 1 : Math.max(1, maxGuests(room));
+}
+
+/** 這個房型一次最多能住幾人：通鋪看剩餘床位，房間看該房間的床位數 */
+export function maxGuests(room: RoomType): number {
+  if (room.available <= 0) return 0;
+  return room.bookingUnit === 'bed'
+    ? Math.min(room.available, room.capacity)
+    : room.capacity;
 }
 
 /** 某個 addon 要收費的人數（扣掉未滿指定歲數的） */
@@ -62,13 +99,13 @@ export function calcBreakdown(
 
   const room = event.registration.roomTypes.find((r) => r.id === draft.roomTypeId);
   if (room) {
-    const amount = accommodationAmount(room, draft.units);
+    const amount = accommodationAmount(room, draft.guests);
     items.push({
       label: `住宿費－${room.name}`,
       note:
         room.bookingUnit === 'bed'
-          ? `${draft.units} 個床位 × NT$ ${room.pricePerPerson.toLocaleString('zh-TW')}`
-          : `${draft.units} 間 × ${room.capacity} 床位 × NT$ ${room.pricePerPerson.toLocaleString('zh-TW')}`,
+          ? `補助後 ${draft.guests} 個床位 × NT$ ${room.pricePerPerson.toLocaleString('zh-TW')}`
+          : `補助後整間 1 間（${people} 位入住・最多 ${room.capacity} 位）`,
       amount,
     });
   }
@@ -92,8 +129,8 @@ export function calcBreakdown(
       label: addon.name,
       note:
         exemptCount > 0
-          ? `${count} 人計費（${exemptCount} 人免費） × NT$ ${addon.price.toLocaleString('zh-TW')}`
-          : `${count} ${addon.per === 'per_person' ? '人' : '筆'} × NT$ ${addon.price.toLocaleString('zh-TW')}`,
+          ? `補助後 ${count} 人計費（${exemptCount} 人免費） × NT$ ${addon.price.toLocaleString('zh-TW')}`
+          : `補助後 ${count} ${addon.per === 'per_person' ? '人' : '筆'} × NT$ ${addon.price.toLocaleString('zh-TW')}`,
       amount: addon.price * count,
     });
   }

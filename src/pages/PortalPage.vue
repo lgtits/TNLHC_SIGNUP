@@ -40,6 +40,7 @@
           :event="event"
           :show-tags="configStore.SHOW_EVENT_TAGS"
           @select="goSignup"
+          @lookup="goLookup"
         />
       </div>
     </div>
@@ -68,6 +69,10 @@ onMounted(() => {
 
 function reload() {
   void load(true);
+}
+
+function goLookup() {
+  void router.push({ name: 'lookup' });
 }
 
 function goSignup(event: EventItem) {

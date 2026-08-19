@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type {
+  AvailabilityMap,
   EventItem,
   FieldDef,
   FieldValues,
@@ -107,13 +108,16 @@ export const useSignupStore = defineStore('signup', () => {
    * 若使用者已選的房型名額變少甚至滿了，一併把選擇收回來，
    * 避免畫面顯示「剩 0 間」卻還停在已選狀態。
    */
-  function applyAvailability(map: Record<string, number>) {
+  function applyAvailability(map: AvailabilityMap) {
     const event = currentEvent.value;
     if (!event) return;
 
     for (const room of event.registration.roomTypes) {
       const next = map[room.id];
-      if (typeof next === 'number') room.available = next;
+      if (!next) continue;
+      room.available = next.count;
+      // 房號只有一般房型會回；沒回就維持 undefined，UI 退回只顯示間數
+      if (next.remaining) room.remainingRooms = next.remaining;
     }
 
     const room = selectedRoom.value;

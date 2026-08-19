@@ -262,6 +262,12 @@ const confirmRows = computed(() => {
     });
   }
 
+  // 房號的最終決定權在後端（併發時可能被別人先拿走），所以這裡寫「預計」
+  const nextRoomNo = room?.bookingUnit === 'room' ? room.remainingRooms?.[0] : undefined;
+  if (nextRoomNo) {
+    rows.push({ label: '預計房號', value: `${nextRoomNo} 號房` });
+  }
+
   if (store.draft.participants.length) {
     rows.push({ label: '參加人數', value: `${store.draft.participants.length} 位` });
   }

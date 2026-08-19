@@ -15,6 +15,12 @@
           <div class="result-page__order">
             訂單編號 <strong>{{ result.orderNo }}</strong>
           </div>
+
+          <!-- 系統分配到的房號，當天報到直接看這裡 -->
+          <div v-if="result.roomNo" class="result-page__room-no">
+            <span>分配房號</span>
+            <strong>{{ result.roomNo }}</strong>
+          </div>
         </section>
 
         <!-- 費用 -->
@@ -89,6 +95,10 @@
               <dt>房型</dt>
               <dd>{{ roomText }}</dd>
             </div>
+            <div v-if="result.roomNo">
+              <dt>分配房號</dt>
+              <dd>{{ result.roomNo }} 號房</dd>
+            </div>
           </dl>
         </section>
 
@@ -111,6 +121,15 @@
               </div>
             </dl>
           </div>
+        </section>
+
+        <!-- 日後回來查房號與繳費狀態的入口 -->
+        <section class="surface-card result-page__block result-page__lookup">
+          <p>
+            這頁關掉之後，可以用<strong>參加者姓名與身分證字號</strong>查詢這筆報名，
+            確認分配到的房號與報名內容。
+          </p>
+          <q-btn outline no-caps color="primary" label="查詢報名" @click="goLookup" />
         </section>
 
         <!-- 返回 -->
@@ -207,6 +226,10 @@ function displayValue(_field: FieldDef, value: string): string {
 function goPortal() {
   void router.push({ name: 'portal' });
 }
+
+function goLookup() {
+  void router.push({ name: 'lookup' });
+}
 </script>
 
 <style scoped lang="scss">
@@ -249,8 +272,47 @@ function goPortal() {
     }
   }
 
+  // 房號是報到當天最常被翻出來看的資訊，給它一塊獨立的視覺區
+  &__room-no {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-top: 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--ink);
+    background: var(--tint);
+
+    span {
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      color: var(--text-muted);
+    }
+
+    strong {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+    }
+  }
+
   &__block {
     padding: 14px var(--content-pad-x) 16px;
+  }
+
+  &__lookup {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 18px var(--content-pad-x) 20px;
+
+    p {
+      margin: 0;
+      font-size: 12.5px;
+      line-height: 1.75;
+      color: var(--text-muted);
+    }
   }
 
   &__info {

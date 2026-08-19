@@ -24,7 +24,7 @@
           <!-- 通鋪以床位計價，其餘房型以「整間」計價 -->
           <span class="room-option__price">
             <small class="room-option__price-prefix">補助後</small>
-            {{ formatPrice(roomDisplayPrice(room)) }}<small>/{{ priceUnit(room) }}</small>
+            {{ formatPrice(room.price) }}<small>/{{ priceUnit(room) }}</small>
           </span>
         </div>
 
@@ -32,9 +32,13 @@
         <p v-if="room.description" class="room-option__desc">{{ room.description }}</p>
 
         <div class="room-option__meta">
-          <!-- 通鋪：算床位；房間：算間數 -->
+          <!-- 通鋪：算床位；房間：列出還沒被分配出去的房號 -->
           <span :class="stockClass(room)">{{ stockText(room) }}</span>
         </div>
+
+        <p v-if="modelValue === room.id && assignHint(room)" class="room-option__assign">
+          {{ assignHint(room) }}
+        </p>
 
         <!-- 選中之後才問住幾個人：房間可以少住人，但不能超過床位數 -->
         <div v-if="modelValue === room.id && maxGuests(room) > 1" class="room-option__units">
@@ -65,7 +69,7 @@
 <script setup lang="ts">
 import type { RoomType } from 'src/types/signup';
 import { formatPrice } from 'src/lib/format';
-import { defaultGuests, maxGuests, roomDisplayPrice } from 'src/lib/pricing';
+import { defaultGuests, maxGuests } from 'src/lib/pricing';
 
 defineProps<{
   modelValue: string | null;
@@ -84,9 +88,20 @@ function priceUnit(room: RoomType): string {
 
 function stockText(room: RoomType): string {
   if (room.available <= 0) return '已額滿';
-  return room.bookingUnit === 'bed'
-    ? `剩 ${room.available} / ${room.capacity} 個床位`
+  if (room.bookingUnit === 'bed') return `剩 ${room.available} / ${room.capacity} 個床位`;
+
+  // 後端同步過名額就直接把還空著的房號列出來，沒同步到才退回顯示間數
+  const free = room.remainingRooms;
+  return free?.length
+    ? `可分配房號 ${free.join('、')}・每間最多 ${room.capacity} 人`
     : `剩 ${room.available} 間・每間最多 ${room.capacity} 人`;
+}
+
+/** 選中時提示等一下會分到哪一間（後端也是照號碼順序分配） */
+function assignHint(room: RoomType): string {
+  if (room.bookingUnit === 'bed' || room.available <= 0) return '';
+  const next = room.remainingRooms?.[0];
+  return next ? `送出後系統會為你保留 ${next} 號房` : '送出後系統會自動分配房號';
 }
 
 function stockClass(room: RoomType) {
@@ -207,6 +222,13 @@ function onGuests(value: number) {
       align-items: center;
       gap: 3px;
     }
+  }
+
+  &__assign {
+    margin: 8px 0 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--q-positive);
   }
 
   &__units {

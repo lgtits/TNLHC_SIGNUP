@@ -19,9 +19,9 @@ export function participantCount(draft: SignupDraft): number {
  */
 export function accommodationAmount(room: RoomType, guests: number): number {
   if (room.bookingUnit === 'bed') {
-    return room.pricePerPerson * guests;
+    return room.price * guests;
   }
-  return room.pricePerPerson * room.capacity;
+  return room.price;
 }
 
 /**
@@ -31,13 +31,6 @@ export function accommodationAmount(room: RoomType, guests: number): number {
  */
 export function bookedUnits(room: RoomType, guests: number): number {
   return room.bookingUnit === 'bed' ? guests : 1;
-}
-
-/** 房型卡片上要顯示的價格：通鋪是「每個床位」，房間是「整間」 */
-export function roomDisplayPrice(room: RoomType): number {
-  return room.bookingUnit === 'bed'
-    ? room.pricePerPerson
-    : room.pricePerPerson * room.capacity;
 }
 
 /**
@@ -104,7 +97,7 @@ export function calcBreakdown(
       label: `住宿費－${room.name}`,
       note:
         room.bookingUnit === 'bed'
-          ? `補助後 ${draft.guests} 個床位 × NT$ ${room.pricePerPerson.toLocaleString('zh-TW')}`
+          ? `補助後 ${draft.guests} 個床位 × NT$ ${room.price.toLocaleString('zh-TW')}`
           : `補助後整間 1 間（${people} 位入住・最多 ${room.capacity} 位）`,
       amount,
     });

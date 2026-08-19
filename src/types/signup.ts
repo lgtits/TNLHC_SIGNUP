@@ -64,11 +64,21 @@ export interface RoomType {
   /** 剩餘量：bed → 剩幾個床位，room → 剩幾間 */
   available: number;
   /**
-   * 每人費用（已含教會補助）。
-   * room 模式下實收 = pricePerPerson × capacity，也就是整間的價格，
-   * 少住人不減價。
+   * 這個房型底下的實體房號（bookingUnit = 'room' 才有），
+   * 例如 ['301', '302']。報名成功後由後端從中挑一間分配出去。
    */
-  pricePerPerson: number;
+  roomNumbers?: string[];
+  /**
+   * 還沒被分配出去的房號。由後端的名額同步回填，不寫在活動 JSON 裡。
+   * 沒同步到就是 undefined，UI 退回只顯示剩餘間數。
+   */
+  remainingRooms?: string[];
+  /**
+   * 住宿費（已含教會補助）。計價單位由 bookingUnit 決定：
+   *   bed  → 每個床位的價格
+   *   room → 整間的價格，跟實際住幾個人無關（少住不減價）
+   */
+  price: number;
   /** 尊榮優先選擇 */
   priority?: boolean;
   note?: string;
@@ -173,11 +183,52 @@ export interface PriceBreakdownItem {
   amount: number;
 }
 
+/** 後端回報的即時名額：房型 id → 剩餘狀況 */
+export interface RoomAvailability {
+  /** 剩餘量：bed → 床位數，room → 間數 */
+  count: number;
+  /** room 模式下還沒分配出去的房號 */
+  remaining?: string[];
+}
+
+export type AvailabilityMap = Record<string, RoomAvailability>;
+
+// ── 報名查詢 ──────────────────────────────────────────────
+
+/** 查詢結果裡的同行者 */
+export interface LookupParticipant {
+  name: string;
+  phone: string;
+  /** yyyy-mm-dd */
+  birthday: string;
+  twid: string;
+}
+
+/** 一筆查到的報名。欄位直接對應 Sheet 上那一列，不重算金額 */
+export interface LookupBooking {
+  orderNo: string;
+  createdAt: string;
+  eventId: string;
+  roomTypeId: string;
+  roomTypeName: string;
+  /** 分配到的房號；通鋪是空字串 */
+  roomNo: string;
+  /** 床位配置說明，例如「1 雙人床 + 2 單人床」 */
+  bedInfo: string;
+  guests: number;
+  total: number;
+  contactName: string;
+  addons: string[];
+  participants: LookupParticipant[];
+}
+
 export interface SignupResult {
   orderNo: string;
   createdAt: string;
   event: EventItem;
   roomType: RoomType | null;
+  /** 系統分配到的房號；通鋪沒有房號，是空字串 */
+  roomNo: string;
   draft: SignupDraft;
   breakdown: PriceBreakdownItem[];
   total: number;

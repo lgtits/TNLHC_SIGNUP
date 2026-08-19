@@ -12,7 +12,10 @@
     "location": "林子內教會（臺南市白河區汴頭里 30-100 號）",
     "description": "對象為小組長、小組核心同工、執事及其家人。10/25（日）下午開始，10/26（一）中午結束。住宿房型先訂先贏。交通以自行前往為原則。",
     "basePrice": 0,
-    "tags": ["10/25–10/26","9/30 截止報名"],
+    "tags": [
+      "10/25–10/26",
+      "9/30 截止報名"
+    ],
     "status": "open",
     "registration": {
       "deadline": "2026-09-30",
@@ -78,7 +81,7 @@
           "bookingUnit": "bed",
           "capacity": 20,
           "available": 13,
-          "pricePerPerson": 300
+          "price": 300
         },
         {
           "id": "room-301-302",
@@ -87,7 +90,11 @@
           "bookingUnit": "room",
           "capacity": 4,
           "available": 2,
-          "pricePerPerson": 375
+          "roomNumbers": [
+            "301",
+            "302"
+          ],
+          "price": 1500
         },
         {
           "id": "room-303",
@@ -96,7 +103,10 @@
           "bookingUnit": "room",
           "capacity": 6,
           "available": 1,
-          "pricePerPerson": 335
+          "roomNumbers": [
+            "303"
+          ],
+          "price": 2000
         },
         {
           "id": "room-304-306",
@@ -105,7 +115,12 @@
           "bookingUnit": "room",
           "capacity": 5,
           "available": 3,
-          "pricePerPerson": 400
+          "roomNumbers": [
+            "304",
+            "305",
+            "306"
+          ],
+          "price": 2000
         },
         {
           "id": "room-309",
@@ -114,7 +129,10 @@
           "bookingUnit": "room",
           "capacity": 5,
           "available": 1,
-          "pricePerPerson": 350,
+          "roomNumbers": [
+            "309"
+          ],
+          "price": 1750,
           "note": ""
         },
         {
@@ -124,7 +142,11 @@
           "bookingUnit": "room",
           "capacity": 4,
           "available": 2,
-          "pricePerPerson": 325,
+          "roomNumbers": [
+            "312",
+            "313"
+          ],
+          "price": 1300,
           "note": ""
         }
       ],

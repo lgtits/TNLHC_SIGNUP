@@ -36,15 +36,26 @@
         </div>
       </dl>
 
-      <q-btn
-        unelevated
-        no-caps
-        color="primary"
-        class="event-card__btn"
-        :disable="isClosed"
-        :label="isClosed ? '已截止' : '立即報名'"
-        @click.stop="emit('select', event)"
-      />
+      <div class="event-card__actions">
+        <q-btn
+          unelevated
+          no-caps
+          color="primary"
+          class="event-card__btn"
+          :disable="isClosed"
+          :label="isClosed ? '已截止' : '立即報名'"
+          @click.stop="emit('select', event)"
+        />
+        <!-- 報過名的人回來查房號與繳費狀態 -->
+        <q-btn
+          outline
+          no-caps
+          color="primary"
+          class="event-card__btn event-card__btn--ghost"
+          label="查詢報名"
+          @click.stop="emit('lookup')"
+        />
+      </div>
     </div>
   </article>
 </template>
@@ -65,6 +76,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: 'select', event: EventItem): void;
+  (e: 'lookup'): void;
 }>();
 
 const STATUS_LABEL: Record<EventItem['status'], string> = {
@@ -209,10 +221,21 @@ const deadlineText = computed(() => {
     }
   }
 
-  &__btn {
-    width: 100%;
+  // 主行動（立即報名）撐滿剩餘寬度，查詢只佔自己需要的寬度
+  &__actions {
+    display: flex;
+    gap: 8px;
     margin-top: 14px;
+  }
+
+  &__btn {
+    flex: 1 1 auto;
     padding: 10px 0;
+  }
+
+  &__btn--ghost {
+    flex: 0 0 auto;
+    padding: 10px 14px;
   }
 }
 

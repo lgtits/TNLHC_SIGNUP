@@ -12,22 +12,27 @@
  *
  * 重新部署時要選「管理部署作業 → 編輯 → 版本：新版本」，
  * 否則網址指向的還是舊程式碼。
+ *
+ * 升級既有的試算表：直接執行一次 setup()，缺的欄位會補在標題列最後面。
+ * 資料是「依標題名稱」讀寫的，欄位順序怎麼排都不影響。
  */
 
 // ── 設定 ────────────────────────────────────────────────
 // 房型名額的唯一真實來源。前端 JSON 只負責顯示，實際扣量以這裡為準。
+//   unit: 'bed'  → 通鋪，以床位計，capacity = 總床位數
+//   unit: 'room' → 一般房型，rooms 列出實體房號，報名時自動分配一間
+//   bedInfo 會寫進試算表，也會在報名查詢時回傳，讓人一眼看出房間長什麼樣
 var ROOMS = {
-  'room-tongpu': { unit: 'bed', capacity: 20, name: '通鋪' },
-  'room-301-302': { unit: 'room', capacity: 4, units: 2, name: '301、302 號房' },
-  'room-303': { unit: 'room', capacity: 6, units: 1, name: '303 號房' },
-  'room-304-306': { unit: 'room', capacity: 5, units: 3, name: '304、305、306 號房' },
-  'room-309': { unit: 'room', capacity: 5, units: 1, name: '309 號房' },
-  'room-312-313': { unit: 'room', capacity: 4, units: 2, name: '312、313 號房' },
+  'room-tongpu': { unit: 'bed', capacity: 20, name: '通鋪', bedInfo: '20 人大通鋪' },
+  'room-301-302': { unit: 'room', capacity: 4, rooms: ['301', '302'], name: '301、302 號房', bedInfo: '1 雙人床 + 2 單人床' },
+  'room-303': { unit: 'room', capacity: 6, rooms: ['303'], name: '303 號房', bedInfo: '2 單人床 + 2 雙人床' },
+  'room-304-306': { unit: 'room', capacity: 5, rooms: ['304', '305', '306'], name: '304、305、306 號房', bedInfo: '5 單人床' },
+  'room-309': { unit: 'room', capacity: 5, rooms: ['309'], name: '309 號房', bedInfo: '1 單人床 + 2 雙人床' },
+  'room-312-313': { unit: 'room', capacity: 4, rooms: ['312', '313'], name: '312、313 號房', bedInfo: '2 雙人床' },
 };
 // 預先保留、不開放報名：307（莉雅）、308（牧師）、310（林執事）、311（楊老師）
 
 // 聯絡人要獨立成欄的欄位（key 對應前端 contactFields 的 key）
-// 順序＝欄位順序；改動這裡的話，既有的 bookings 工作表要一起調整欄位。
 var CONTACT_COLUMNS = [
   { key: 'contactName', label: '聯絡人姓名' },
   { key: 'email', label: '聯絡人 Email' },
@@ -42,11 +47,15 @@ var ADDON_COLUMNS = [
 var BOOKING_SHEET = 'bookings';
 var PARTICIPANT_SHEET = 'participants';
 
+// 多個房號寫在同一格時的分隔符號（目前一筆報名只會分到一間，先留著）
+var ROOM_NO_SEP = '、';
+
 // ── 對外入口 ────────────────────────────────────────────
 
 /**
  * 手動執行一次即可：建立兩張工作表與標題列。
  * 在編輯器上方的函式下拉選單選 setup 後按執行。
+ * 已經有資料的試算表再執行也安全 —— 只會把缺的欄位補在最後面。
  */
 function setup() {
   ensureSheets();
@@ -101,11 +110,12 @@ function protectSheets() {
   SpreadsheetApp.getActiveSpreadsheet().toast('兩張工作表已鎖定', '保護設定完成');
 }
 
-/** 查目前剩餘名額 */
+/** 查目前剩餘名額與還沒被分配出去的房號 */
 function doGet() {
   try {
     ensureSheets();
-    return json({ ok: true, availability: getAvailability() });
+    var stock = getStock();
+    return json({ ok: true, availability: stock.availability, remaining: stock.remaining });
   } catch (err) {
     return json({ ok: false, error: String(err) });
   }
@@ -124,8 +134,13 @@ function doPost(e) {
 
   try {
     ensureSheets();
-    var draft = JSON.parse(e.postData.contents);
-    return json(createBooking(draft));
+    var payload = JSON.parse(e.postData.contents);
+
+    // 查詢走 POST 而不是 GET：身分證字號放在 query string 會被記進
+    // 執行記錄、瀏覽器歷史與 referrer，放在 body 才只留在這次請求裡。
+    if (payload.action === 'lookup') return json(lookupBookings(payload));
+
+    return json(createBooking(payload));
   } catch (err) {
     return json({ ok: false, error: String(err) });
   } finally {
@@ -138,28 +153,66 @@ function doPost(e) {
 // ── 核心邏輯 ────────────────────────────────────────────
 
 /**
- * 剩餘名額用「現數」算，不存計數器。
- * 這樣同工手動刪掉一列，就等於釋放一個名額，語意剛好正確。
+ * 掃一次 bookings，算出每個房型的剩餘量，以及房間房型還有哪些房號沒分出去。
+ *
+ * 一律用「現數」計算，不存計數器 —— 同工手動刪掉一列，
+ * 那個床位／房號就自動回到可分配狀態，語意剛好正確。
  */
-function getAvailability() {
-  var rows = getSheet(BOOKING_SHEET).getDataRange().getValues();
-  var used = {};
+function getStock() {
+  var sheet = getSheet(BOOKING_SHEET);
+  var rows = sheet.getDataRange().getValues();
+  var cols = headerMap(sheet);
+
+  var usedBeds = {}; // 房型ID → 已佔用床位數（通鋪用）
+  var takenRooms = {}; // 房號 → 已被分配
+  var untagged = {}; // 房型ID → 有訂房但沒填房號的間數
 
   // 第 0 列是標題，從 1 開始
   for (var i = 1; i < rows.length; i++) {
-    var roomId = rows[i][3];
-    var units = Number(rows[i][4]) || 0;
+    var roomId = rows[i][cols['房型ID']];
     if (!roomId) continue;
-    used[roomId] = (used[roomId] || 0) + units;
+
+    var units = Number(rows[i][cols['數量']]) || 0;
+    usedBeds[roomId] = (usedBeds[roomId] || 0) + units;
+
+    var noText = String(rows[i][cols['房號']] || '').trim();
+    if (!noText) {
+      // 自動分房上線前寫入的舊資料，或同工手動補的列。
+      // 沒填房號一樣要佔掉名額，否則同一間房會被分配第二次。
+      untagged[roomId] = (untagged[roomId] || 0) + units;
+      continue;
+    }
+
+    noText.split(ROOM_NO_SEP).forEach(function (no) {
+      var trimmed = no.trim();
+      if (trimmed) takenRooms[trimmed] = true;
+    });
   }
 
-  var result = {};
+  var availability = {};
+  var remaining = {};
+
   for (var id in ROOMS) {
     var room = ROOMS[id];
-    var total = room.unit === 'bed' ? room.capacity : room.units;
-    result[id] = Math.max(0, total - (used[id] || 0));
+
+    if (room.unit === 'bed') {
+      availability[id] = Math.max(0, room.capacity - (usedBeds[id] || 0));
+      continue;
+    }
+
+    var free = room.rooms.filter(function (no) {
+      return !takenRooms[no];
+    });
+
+    // 沒填房號的訂房，保守地從號碼小的開始扣，寧可少算也不要重複分配
+    var unknown = untagged[id] || 0;
+    if (unknown > 0) free = free.slice(unknown);
+
+    remaining[id] = free;
+    availability[id] = free.length;
   }
-  return result;
+
+  return { availability: availability, remaining: remaining };
 }
 
 function createBooking(draft) {
@@ -169,14 +222,32 @@ function createBooking(draft) {
   var units = Number(draft.units) || 0;
   if (units < 1) return { ok: false, error: '數量不正確。' };
 
-  // 檢查與寫入在同一個鎖裡完成，這是防止重複預訂的關鍵
-  var available = getAvailability()[draft.roomTypeId];
+  // 檢查、分配與寫入在同一個鎖裡完成，這是防止重複預訂／重複分房的關鍵
+  var stock = getStock();
+  var available = stock.availability[draft.roomTypeId];
   if (units > available) {
     return {
       ok: false,
-      error: room.name + ' 只剩 ' + available + (room.unit === 'bed' ? ' 個床位' : ' 間') + '，請重新選擇。',
-      availability: getAvailability(),
+      error:
+        room.name + ' 只剩 ' + available + (room.unit === 'bed' ? ' 個床位' : ' 間') + '，請重新選擇。',
+      availability: stock.availability,
+      remaining: stock.remaining,
     };
+  }
+
+  // 房間房型：從還沒分配出去的房號裡，照號碼順序指派給這筆報名。
+  // 通鋪沒有房號，留空字串。
+  var roomNo = '';
+  if (room.unit === 'room') {
+    roomNo = (stock.remaining[draft.roomTypeId] || []).slice(0, units).join(ROOM_NO_SEP);
+    if (!roomNo) {
+      return {
+        ok: false,
+        error: room.name + ' 剛剛被訂走了，請重新選擇。',
+        availability: stock.availability,
+        remaining: stock.remaining,
+      };
+    }
   }
 
   var orderNo = makeOrderNo();
@@ -186,40 +257,164 @@ function createBooking(draft) {
   var contact = draft.contact || {};
   var addons = draft.addons || {};
 
-  // 前 7 欄的順序不能動：getAvailability() 依 index 3（房型ID）與 4（數量）計算名額
-  var row = [orderNo, now, draft.eventId, draft.roomTypeId, units, room.name, people.length];
-
+  var values = {
+    '訂單編號': orderNo,
+    '報名時間': now,
+    '活動': draft.eventId,
+    '房型ID': draft.roomTypeId,
+    '數量': units,
+    '房型': room.name,
+    '房號': roomNo,
+    '床位配置': room.bedInfo || '',
+    '人數': people.length,
+    '總金額': Number(draft.total) || 0,
+    '繳費狀態': '未繳費',
+  };
   CONTACT_COLUMNS.forEach(function (c) {
-    row.push(contact[c.key] || '');
+    values[c.label] = contact[c.key] || '';
   });
   ADDON_COLUMNS.forEach(function (a) {
-    row.push(addons[a.id] ? '✓' : '');
+    values[a.label] = addons[a.id] ? '✓' : '';
   });
+  appendByHeader(getSheet(BOOKING_SHEET), values);
 
-  row.push(Number(draft.total) || 0, '未繳費');
-  getSheet(BOOKING_SHEET).appendRow(row);
-
-  var sheet = getSheet(PARTICIPANT_SHEET);
+  var participantSheet = getSheet(PARTICIPANT_SHEET);
   for (var i = 0; i < people.length; i++) {
     var p = people[i];
-    sheet.appendRow([
-      orderNo,
-      i + 1,
-      p.name || '',
-      p.phone || '',
-      p.birthday || '',
-      p.twid || '',
-      room.name,
-    ]);
+    appendByHeader(participantSheet, {
+      '訂單編號': orderNo,
+      '序號': i + 1,
+      '姓名': p.name || '',
+      '電話': p.phone || '',
+      '出生年月日': p.birthday || '',
+      '身分證字號': p.twid || '',
+      '房型': room.name,
+      '房號': roomNo,
+      '床位配置': room.bedInfo || '',
+    });
   }
 
-  return { ok: true, orderNo: orderNo, createdAt: now.toISOString() };
+  return { ok: true, orderNo: orderNo, roomNo: roomNo, createdAt: now.toISOString() };
+}
+
+// ── 查詢報名 ────────────────────────────────────────────
+
+/** 同一個身分證字號的查詢頻率上限（次 / 分鐘），擋暴力嘗試 */
+var LOOKUP_RATE_LIMIT = 10;
+
+/**
+ * 用「參加者姓名 + 身分證字號」找出他所屬的報名，回傳整筆訂單（含同行者）。
+ *
+ * 查無資料時不區分「姓名不符」或「身分證不符」，
+ * 否則這支 API 會變成可以拿來試探別人資料的工具。
+ * 資料是完整回傳的，所以「姓名 + 身分證」這道門檻與 allowLookup() 的
+ * 節流就是唯一的保護，不要放寬成單一欄位查詢。
+ */
+function lookupBookings(payload) {
+  var name = String(payload.name || '').trim();
+  var twid = String(payload.twid || '').trim().toUpperCase();
+  if (!name || !twid) return { ok: false, error: '請輸入姓名與身分證字號。' };
+  if (!allowLookup(twid)) {
+    return { ok: false, error: '查詢次數過於頻繁，請稍後再試。' };
+  }
+
+  var pSheet = getSheet(PARTICIPANT_SHEET);
+  var pRows = pSheet.getDataRange().getValues();
+  var pCols = headerMap(pSheet);
+
+  // 先找出這個人出現在哪些訂單
+  var matched = {};
+  for (var i = 1; i < pRows.length; i++) {
+    var rowName = String(pRows[i][pCols['姓名']] || '').trim();
+    var rowId = String(pRows[i][pCols['身分證字號']] || '').trim().toUpperCase();
+    if (rowName === name && rowId === twid) {
+      matched[String(pRows[i][pCols['訂單編號']] || '').trim()] = true;
+    }
+  }
+  if (!Object.keys(matched).length) return { ok: true, bookings: [] };
+
+  // 再把那些訂單的同行者收齊
+  var peopleByOrder = {};
+  for (var j = 1; j < pRows.length; j++) {
+    var orderNo = String(pRows[j][pCols['訂單編號']] || '').trim();
+    if (!matched[orderNo]) continue;
+
+    (peopleByOrder[orderNo] = peopleByOrder[orderNo] || []).push({
+      name: String(pRows[j][pCols['姓名']] || ''),
+      phone: toPhoneText(pRows[j][pCols['電話']]),
+      birthday: toDateText(pRows[j][pCols['出生年月日']]),
+      twid: String(pRows[j][pCols['身分證字號']] || '').trim(),
+    });
+  }
+
+  var bSheet = getSheet(BOOKING_SHEET);
+  var bRows = bSheet.getDataRange().getValues();
+  var bCols = headerMap(bSheet);
+  var bookings = [];
+
+  for (var k = 1; k < bRows.length; k++) {
+    var no = String(bRows[k][bCols['訂單編號']] || '').trim();
+    if (!matched[no]) continue;
+
+    var addons = [];
+    ADDON_COLUMNS.forEach(function (a) {
+      if (bRows[k][bCols[a.label]]) addons.push(a.label);
+    });
+
+    bookings.push({
+      orderNo: no,
+      createdAt: toIso(bRows[k][bCols['報名時間']]),
+      eventId: String(bRows[k][bCols['活動']] || ''),
+      roomTypeId: String(bRows[k][bCols['房型ID']] || ''),
+      roomTypeName: String(bRows[k][bCols['房型']] || ''),
+      roomNo: String(bRows[k][bCols['房號']] || ''),
+      // 房間長什麼樣，查詢時一併顯示比只給房號清楚
+      bedInfo: String(bRows[k][bCols['床位配置']] || ''),
+      guests: Number(bRows[k][bCols['人數']]) || 0,
+      total: Number(bRows[k][bCols['總金額']]) || 0,
+      // 繳費狀態刻意不回傳：那一欄是同工內部核帳用的，不對外顯示
+      contactName: String(bRows[k][bCols['聯絡人姓名']] || ''),
+      addons: addons,
+      participants: peopleByOrder[no] || [],
+    });
+  }
+
+  return { ok: true, bookings: bookings };
+}
+
+/** 以身分證字號為 key 的簡易節流，狀態放 CacheService，過期自動清掉 */
+function allowLookup(twid) {
+  var cache = CacheService.getScriptCache();
+  var key = 'lookup-' + Utilities.base64Encode(twid);
+  var count = Number(cache.get(key) || 0) + 1;
+  cache.put(key, String(count), 60);
+  return count <= LOOKUP_RATE_LIMIT;
+}
+
+/** 試算表可能把日期存成 Date 物件，統一輸出 yyyy-mm-dd */
+function toDateText(value) {
+  if (value instanceof Date) {
+    return Utilities.formatDate(value, 'Asia/Taipei', 'yyyy-MM-dd');
+  }
+  return String(value || '').trim();
+}
+
+/** 試算表會把 0912345678 當成數字存，開頭的 0 會不見，這裡補回來 */
+function toPhoneText(value) {
+  var s = String(value || '').trim();
+  if (/^\d{9}$/.test(s)) return '0' + s;
+  return s;
+}
+
+function toIso(value) {
+  if (value instanceof Date) return value.toISOString();
+  return String(value || '');
 }
 
 // ── 工具 ────────────────────────────────────────────────
 
 var HEADERS = {};
-HEADERS[BOOKING_SHEET] = ['訂單編號', '報名時間', '活動', '房型ID', '數量', '房型', '人數']
+HEADERS[BOOKING_SHEET] = ['訂單編號', '報名時間', '活動', '房型ID', '數量', '房型', '房號', '床位配置', '人數']
   .concat(
     CONTACT_COLUMNS.map(function (c) {
       return c.label;
@@ -232,7 +427,7 @@ HEADERS[BOOKING_SHEET] = ['訂單編號', '報名時間', '活動', '房型ID', 
   )
   .concat(['總金額', '繳費狀態']);
 HEADERS[PARTICIPANT_SHEET] = [
-  '訂單編號', '序號', '姓名', '電話', '出生年月日', '身分證字號', '房型',
+  '訂單編號', '序號', '姓名', '電話', '出生年月日', '身分證字號', '房型', '房號', '床位配置',
 ];
 
 function getSheet(name) {
@@ -242,8 +437,52 @@ function getSheet(name) {
     sheet = ss.insertSheet(name);
     sheet.appendRow(HEADERS[name]);
     sheet.setFrozenRows(1);
+    return sheet;
   }
+  addMissingHeaders(sheet, HEADERS[name]);
   return sheet;
+}
+
+/** 標題名稱 → 欄位索引（0 起算） */
+function headerMap(sheet) {
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var map = {};
+  for (var i = 0; i < headers.length; i++) {
+    map[String(headers[i]).trim()] = i;
+  }
+  return map;
+}
+
+/**
+ * 補上標題列缺少的欄位（加在最後面）。
+ * 既有資料不會位移，新欄位對舊資料就是空白。
+ */
+function addMissingHeaders(sheet, headers) {
+  var map = headerMap(sheet);
+  var missing = headers.filter(function (label) {
+    return map[label] === undefined;
+  });
+  if (!missing.length) return;
+
+  sheet.getRange(1, sheet.getLastColumn() + 1, 1, missing.length).setValues([missing]);
+}
+
+/**
+ * 依「標題名稱」寫入一列，而不是依欄位順序。
+ * 這樣同工在試算表上調換欄位順序、或中間插入一欄註記，都不會讓資料錯位。
+ */
+function appendByHeader(sheet, values) {
+  var map = headerMap(sheet);
+  var row = [];
+  for (var i = 0; i < sheet.getLastColumn(); i++) row.push('');
+
+  for (var label in values) {
+    var idx = map[label];
+    if (idx === undefined) continue; // 表上沒有這欄就跳過，不要硬塞
+    row[idx] = values[label];
+  }
+
+  sheet.appendRow(row);
 }
 
 function makeOrderNo() {

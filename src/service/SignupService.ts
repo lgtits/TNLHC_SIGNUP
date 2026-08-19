@@ -64,19 +64,65 @@ interface SheetResponse {
 }
 
 /**
+ * 每次都換一個網址，避免瀏覽器沿用上一輪的轉址結果。
+ * Apps Script 的 googleusercontent.com 轉址帶的 user_content_key 是一次性的，
+ * 重複使用會拿到 404。
+ */
+function bust(url: string): string {
+  return `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`;
+}
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Apps Script 會把請求轉到 script.googleusercontent.com/macros/echo，
+ * 那把 key 是一次性的，實測還會偶爾彈回原網址再重發一次，
+ * 過程中有機率直接回 404。這是 Google 端的行為，我們只能重試。
+ *
+ * 實測失敗會連著出現（一次三、四發），而且失敗回得很快（幾百毫秒），
+ * 成功反而要 1～3 秒，所以次數給多一點、間隔拉開，代價不大。
+ *
+ * ⚠️ 只能用在「重送也不會有副作用」的請求（查名額、查報名）。
+ * 送出報名絕對不能重試 —— 後端沒有冪等鍵，重送就是重複報名。
+ */
+async function fetchIdempotent(url: string, init?: RequestInit): Promise<Response> {
+  const ATTEMPTS = 4;
+  let lastError: Error | null = null;
+
+  for (let i = 0; i < ATTEMPTS; i += 1) {
+    try {
+      const res = await fetch(bust(url), init);
+      if (res.ok) return res;
+      lastError = new Error(`連線失敗（${res.status}）`);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error('連線失敗');
+    }
+    if (i < ATTEMPTS - 1) await delay(400 * (i + 1));
+  }
+
+  throw lastError ?? new Error('連線失敗，請稍後再試。');
+}
+
+/**
  * 送到 Apps Script Web App。
  *
  * 刻意用 text/plain：Apps Script 不回應 CORS preflight（OPTIONS），
  * 用 application/json 會觸發 preflight 而失敗。text/plain 屬於
  * simple request，瀏覽器直接送出。Apps Script 端照樣讀得到 JSON 字串。
+ *
+ * retry 預設關閉：這支同時被「送出報名」使用，重送會變成重複報名。
  */
-async function postToSheet(payload: unknown): Promise<SheetResponse> {
-  const res = await fetch(SHEET_API_URL, {
+async function postToSheet(payload: unknown, retry = false): Promise<SheetResponse> {
+  const init: RequestInit = {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(payload),
     redirect: 'follow', // Apps Script 會轉址到 googleusercontent.com
-  });
+  };
+
+  const res = retry
+    ? await fetchIdempotent(SHEET_API_URL, init)
+    : await fetch(SHEET_API_URL, init);
 
   if (!res.ok) throw new Error(`連線失敗（${res.status}），請稍後再試。`);
   return (await res.json()) as SheetResponse;
@@ -88,8 +134,9 @@ async function postToSheet(payload: unknown): Promise<SheetResponse> {
  */
 export async function fetchAvailability(): Promise<AvailabilityMap> {
   if (IS_DEMO_MODE || !SHEET_API_URL) return {};
-  const res = await fetch(SHEET_API_URL);
-  if (!res.ok) return {};
+
+  // 純讀取，重試沒有副作用
+  const res = await fetchIdempotent(SHEET_API_URL);
 
   const data = (await res.json()) as {
     ok: boolean;
@@ -123,11 +170,15 @@ export async function lookupBookings(
     throw new Error('尚未設定 SHEET_API_URL，請檢查 config.json。');
   }
 
-  const res = await postToSheet({
-    action: 'lookup',
-    name: name.trim(),
-    twid: twid.trim().toUpperCase(),
-  });
+  // 查詢是唯讀的，重送安全
+  const res = await postToSheet(
+    {
+      action: 'lookup',
+      name: name.trim(),
+      twid: twid.trim().toUpperCase(),
+    },
+    true,
+  );
   if (!res.ok) throw new Error(res.error ?? '查詢失敗，請稍後再試。');
 
   return res.bookings ?? [];

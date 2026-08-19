@@ -13,8 +13,9 @@
  * 重新部署時要選「管理部署作業 → 編輯 → 版本：新版本」，
  * 否則網址指向的還是舊程式碼。
  *
- * 升級既有的試算表：直接執行一次 setup()，缺的欄位會補在標題列最後面。
- * 資料是「依標題名稱」讀寫的，欄位順序怎麼排都不影響。
+ * 升級既有的試算表：改完欄位定義後，一定要手動執行一次 setup()，
+ * 缺的欄位會補在標題列最後面。資料是「依標題名稱」讀寫的，
+ * 欄位順序怎麼排都不影響，但欄位不存在會讓報名寫入直接失敗。
  */
 
 // ── 設定 ────────────────────────────────────────────────
@@ -60,6 +61,7 @@ var ROOM_NO_SEP = '、';
  */
 function setup() {
   ensureSheets();
+  upgradeHeaders();
   SpreadsheetApp.getActiveSpreadsheet().toast('bookings / participants 已就緒', '初始化完成');
 }
 
@@ -67,6 +69,16 @@ function setup() {
 function ensureSheets() {
   getSheet(BOOKING_SHEET);
   getSheet(PARTICIPANT_SHEET);
+}
+
+/**
+ * 把程式碼裡新增的欄位補到既有的工作表上。
+ * 改完 HEADERS / CONTACT_COLUMNS / ADDON_COLUMNS 之後要手動執行一次，
+ * 不然報名寫入會因為缺欄位而直接失敗（assertColumns 會擋下來）。
+ */
+function upgradeHeaders() {
+  addMissingHeaders(getSheet(BOOKING_SHEET), HEADERS[BOOKING_SHEET]);
+  addMissingHeaders(getSheet(PARTICIPANT_SHEET), HEADERS[PARTICIPANT_SHEET]);
 }
 
 /**
@@ -223,6 +235,10 @@ function createBooking(draft) {
   var units = Number(draft.units) || 0;
   if (units < 1) return { ok: false, error: '數量不正確。' };
 
+  // 兩張表的欄位先一起檢查，缺欄位就整筆不寫
+  assertColumns(getSheet(BOOKING_SHEET), HEADERS[BOOKING_SHEET]);
+  assertColumns(getSheet(PARTICIPANT_SHEET), HEADERS[PARTICIPANT_SHEET]);
+
   // 檢查、分配與寫入在同一個鎖裡完成，這是防止重複預訂／重複分房的關鍵
   var stock = getStock();
   var available = stock.availability[draft.roomTypeId];
@@ -277,12 +293,10 @@ function createBooking(draft) {
   ADDON_COLUMNS.forEach(function (a) {
     values[a.label] = addons[a.id] ? '✓' : '';
   });
-  appendByHeader(getSheet(BOOKING_SHEET), values);
+  appendRowsByHeader(getSheet(BOOKING_SHEET), [values]);
 
-  var participantSheet = getSheet(PARTICIPANT_SHEET);
-  for (var i = 0; i < people.length; i++) {
-    var p = people[i];
-    appendByHeader(participantSheet, {
+  var participantRows = people.map(function (p, i) {
+    return {
       '訂單編號': orderNo,
       '序號': i + 1,
       '姓名': p.name || '',
@@ -292,8 +306,9 @@ function createBooking(draft) {
       '房型': room.name,
       '房號': roomNo,
       '床位配置': room.bedInfo || '',
-    });
-  }
+    };
+  });
+  appendRowsByHeader(getSheet(PARTICIPANT_SHEET), participantRows);
 
   return { ok: true, orderNo: orderNo, roomNo: roomNo, createdAt: now.toISOString() };
 }
@@ -431,32 +446,57 @@ HEADERS[PARTICIPANT_SHEET] = [
   '訂單編號', '序號', '姓名', '電話', '出生年月日', '身分證字號', '房型', '房號', '床位配置',
 ];
 
+/**
+ * 每次請求就是一次全新的執行環境，所以這兩層快取只在單次請求內有效，
+ * 不會有跨請求讀到舊資料的問題。
+ *
+ * 沒有快取的話，一次送出報名要來回試算表十幾次（光是標題列就重讀 5、6 遍），
+ * 執行時間會拉到 3～4 秒，連帶讓 doPost 的鎖持有太久、排隊卡住其他人。
+ */
+var SHEET_CACHE = {};
+var HEADER_CACHE = {};
+
 function getSheet(name) {
+  if (SHEET_CACHE[name]) return SHEET_CACHE[name];
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(name);
   if (!sheet) {
     sheet = ss.insertSheet(name);
     sheet.appendRow(HEADERS[name]);
     sheet.setFrozenRows(1);
-    return sheet;
   }
-  addMissingHeaders(sheet, HEADERS[name]);
+
+  SHEET_CACHE[name] = sheet;
   return sheet;
 }
 
-/** 標題名稱 → 欄位索引（0 起算） */
-function headerMap(sheet) {
+/** 標題列讀一次就快取起來，回傳 { map: 標題→索引, width: 欄數 } */
+function headerInfo(sheet) {
+  var name = sheet.getName();
+  if (HEADER_CACHE[name]) return HEADER_CACHE[name];
+
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   var map = {};
   for (var i = 0; i < headers.length; i++) {
     map[String(headers[i]).trim()] = i;
   }
-  return map;
+
+  HEADER_CACHE[name] = { map: map, width: headers.length };
+  return HEADER_CACHE[name];
+}
+
+/** 標題名稱 → 欄位索引（0 起算） */
+function headerMap(sheet) {
+  return headerInfo(sheet).map;
 }
 
 /**
  * 補上標題列缺少的欄位（加在最後面）。
  * 既有資料不會位移，新欄位對舊資料就是空白。
+ *
+ * 這件事只在手動執行 setup() 時做。以前每次請求都跑，等於每次都多讀兩次標題列，
+ * 而欄位定義只有在改程式碼時才會變動，沒必要每個使用者都幫忙檢查一遍。
  */
 function addMissingHeaders(sheet, headers) {
   var map = headerMap(sheet);
@@ -466,24 +506,53 @@ function addMissingHeaders(sheet, headers) {
   if (!missing.length) return;
 
   sheet.getRange(1, sheet.getLastColumn() + 1, 1, missing.length).setValues([missing]);
+  delete HEADER_CACHE[sheet.getName()]; // 標題列變了，快取作廢
 }
 
 /**
- * 依「標題名稱」寫入一列，而不是依欄位順序。
- * 這樣同工在試算表上調換欄位順序、或中間插入一欄註記，都不會讓資料錯位。
+ * 確認要寫入的欄位在表上都存在。
+ * 在動筆之前先檢查，避免 bookings 寫進去了、participants 才失敗，
+ * 留下一筆佔著房號卻沒有名單的孤兒資料。
  */
-function appendByHeader(sheet, values) {
+function assertColumns(sheet, headers) {
   var map = headerMap(sheet);
-  var row = [];
-  for (var i = 0; i < sheet.getLastColumn(); i++) row.push('');
-
-  for (var label in values) {
-    var idx = map[label];
-    if (idx === undefined) continue; // 表上沒有這欄就跳過，不要硬塞
-    row[idx] = values[label];
+  var missing = headers.filter(function (label) {
+    return map[label] === undefined;
+  });
+  if (missing.length) {
+    throw new Error(
+      '工作表「' + sheet.getName() + '」缺少欄位：' + missing.join('、') +
+        '。請先在 Apps Script 編輯器執行一次 setup()。',
+    );
   }
+}
 
-  sheet.appendRow(row);
+/**
+ * 依「標題名稱」一次寫入多列，而不是依欄位順序。
+ * 這樣同工在試算表上調換欄位順序、或中間插入一欄註記，都不會讓資料錯位。
+ *
+ * 多列合併成一次 setValues，5 個人的名單從 5 次往返變成 1 次。
+ */
+function appendRowsByHeader(sheet, rows) {
+  if (!rows.length) return;
+
+  var info = headerInfo(sheet);
+  var values = rows.map(function (data) {
+    var row = [];
+    for (var i = 0; i < info.width; i++) row.push('');
+
+    for (var label in data) {
+      var idx = info.map[label];
+      // 靜靜跳過會寫出缺房號的殘缺資料，寧可整筆失敗
+      if (idx === undefined) {
+        throw new Error('工作表「' + sheet.getName() + '」缺少欄位「' + label + '」。');
+      }
+      row[idx] = data[label];
+    }
+    return row;
+  });
+
+  sheet.getRange(sheet.getLastRow() + 1, 1, values.length, info.width).setValues(values);
 }
 
 function makeOrderNo() {

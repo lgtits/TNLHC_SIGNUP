@@ -73,6 +73,13 @@
                 <q-spinner size="12px" /> 名額更新中
               </span>
             </h2>
+
+            <!-- 名額沒抓到就明講，不要讓人以為畫面上的數字是即時的 -->
+            <div v-if="quotaStale && !isSyncingQuota" class="signup-page__stale">
+              <q-icon name="cloud_off" size="16px" />
+              <span>目前顯示的剩餘名額可能不是最新的。你仍然可以送出，系統會在送出時重新確認名額。</span>
+              <q-btn flat dense no-caps size="sm" color="primary" label="重試" @click="retryQuota" />
+            </div>
             <RoomTypePicker
               :model-value="store.draft.roomTypeId"
               :guests="store.draft.guests"
@@ -221,7 +228,7 @@ const $q = useQuasar();
 const router = useRouter();
 const store = useSignupStore();
 const config = useConfigStore();
-const { isLoading, isSyncingQuota, error, load, syncQuota } = useEventDetail();
+const { isLoading, isSyncingQuota, quotaStale, error, load, syncQuota } = useEventDetail();
 
 const formRef = ref<QForm | null>(null);
 const isSubmitting = ref(false);
@@ -288,6 +295,10 @@ onMounted(() => {
 
 function goPortal() {
   void router.push({ name: 'portal' });
+}
+
+function retryQuota() {
+  void syncQuota();
 }
 
 /** 驗證通過只開確認彈窗，不直接送出 */
@@ -453,6 +464,25 @@ async function confirmSubmit() {
     font-weight: 600;
     letter-spacing: 0.04em;
     color: var(--text-muted);
+  }
+
+  &__stale {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+    padding: 9px 11px;
+    background: var(--tint);
+    border: 1px solid var(--hairline);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-muted);
+
+    span {
+      flex: 1;
+      min-width: 180px;
+    }
   }
 
   &__error {

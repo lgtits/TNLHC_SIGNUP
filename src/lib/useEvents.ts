@@ -34,6 +34,8 @@ export function useEventDetail() {
   const signupStore = useSignupStore();
   const isLoading = ref(false);
   const isSyncingQuota = ref(false);
+  /** 名額沒同步到：畫面上的剩餘量是資料檔裡的靜態數字，可能不是最新的 */
+  const quotaStale = ref(false);
   const error = ref<string | null>(null);
 
   /**
@@ -45,7 +47,10 @@ export function useEventDetail() {
     try {
       const map = await fetchAvailability();
       if (Object.keys(map).length > 0) signupStore.applyAvailability(map);
+      quotaStale.value = false;
     } catch (err) {
+      // 失敗要讓使用者知道，否則他看到的是舊數字卻以為是即時的
+      quotaStale.value = true;
       console.warn('[quota] 名額同步失敗，改用資料檔中的數字', err);
     } finally {
       isSyncingQuota.value = false;
@@ -82,5 +87,5 @@ export function useEventDetail() {
     await syncQuota();
   }
 
-  return { isLoading, isSyncingQuota, error, load, syncQuota };
+  return { isLoading, isSyncingQuota, quotaStale, error, load, syncQuota };
 }

@@ -32,43 +32,11 @@
         <!-- 轉帳資訊 -->
         <section v-if="payment" class="surface-card result-page__block">
           <h2 class="section-title">轉帳資訊</h2>
-          <dl class="result-page__info">
-            <div>
-              <dt>銀行</dt>
-              <dd>{{ payment.bankName }}（代碼 {{ payment.bankCode }}）</dd>
-            </div>
-            <div>
-              <dt>帳號</dt>
-              <dd class="result-page__account">
-                <span>{{ payment.account }}</span>
-                <q-btn
-                  flat
-                  dense
-                  no-caps
-                  size="sm"
-                  color="primary"
-                  label="複製"
-                  @click="copyAccount"
-                />
-              </dd>
-            </div>
-            <div>
-              <dt>戶名</dt>
-              <dd>{{ payment.accountName }}</dd>
-            </div>
-            <div>
-              <dt>轉帳備註</dt>
-              <dd>{{ payment.noteFormat }}</dd>
-            </div>
-            <div>
-              <dt>繳費期限</dt>
-              <dd>{{ dueDateText }}</dd>
-            </div>
-            <div>
-              <dt>應繳金額</dt>
-              <dd>{{ formatPrice(result.total) }}</dd>
-            </div>
-          </dl>
+          <PaymentInfo
+            :payment="payment"
+            :total="result.total"
+            :created-at="result.createdAt"
+          />
         </section>
 
         <!-- 報名內容 -->
@@ -160,12 +128,11 @@
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import PriceBreakdown from 'components/PriceBreakdown.vue';
+import PaymentInfo from 'components/PaymentInfo.vue';
 import { useSignupStore } from 'src/stores/signup-store';
-import { useQuasar } from 'quasar';
-import { formatDateRange, formatPrice } from 'src/lib/format';
+import { formatDateRange } from 'src/lib/format';
 import type { FieldDef } from 'src/types/signup';
 
-const $q = useQuasar();
 const router = useRouter();
 const signupStore = useSignupStore();
 
@@ -194,21 +161,6 @@ const dueDateText = computed(() => {
   due.setDate(due.getDate() + p.dueDays);
   return `${due.getFullYear()}/${due.getMonth() + 1}/${due.getDate()}`;
 });
-
-async function copyAccount() {
-  const account = payment.value?.account;
-  if (!account) return;
-  try {
-    await navigator.clipboard.writeText(account);
-    $q.notify({ message: '帳號已複製', position: 'top', timeout: 1500 });
-  } catch {
-    $q.notify({
-      type: 'negative',
-      message: '複製失敗，請手動選取帳號',
-      position: 'top',
-    });
-  }
-}
 
 const roomText = computed(() => {
   const r = result.value;
@@ -350,17 +302,6 @@ function goLookup() {
     font-size: 12px;
     line-height: 1.6;
     color: var(--text-muted);
-  }
-
-  &__account {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    span {
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      letter-spacing: 0.04em;
-    }
   }
 
   &__count {

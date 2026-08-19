@@ -84,6 +84,20 @@
           "price": 300
         },
         {
+          "id": "room-204-206",
+          "name": "204、205、206 號房",
+          "bedInfo": "5 單人床",
+          "bookingUnit": "room",
+          "capacity": 5,
+          "available": 3,
+          "roomNumbers": [
+            "204",
+            "205",
+            "206"
+          ],
+          "price": 2000
+        },
+        {
           "id": "room-301-302",
           "name": "301、302 號房",
           "bedInfo": "1 雙人床 + 2 單人床",

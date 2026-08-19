@@ -120,6 +120,16 @@
             </span>
           </li>
         </ul>
+
+        <!-- 轉帳資訊來自活動設定，不是報名資料，所以查詢時直接讀活動 JSON -->
+        <template v-if="paymentOf(booking)">
+          <h2 class="section-title lookup-page__payment-title">轉帳資訊</h2>
+          <PaymentInfo
+            :payment="paymentOf(booking)!"
+            :total="booking.total"
+            :created-at="booking.createdAt"
+          />
+        </template>
       </section>
     </div>
   </q-page>
@@ -130,9 +140,15 @@ import { reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useQuasar, type QForm } from "quasar";
 import DynamicField from "components/DynamicField.vue";
-import { lookupBookings } from "src/service/SignupService";
+import PaymentInfo from "components/PaymentInfo.vue";
+import { fetchEventById, lookupBookings } from "src/service/SignupService";
 import { formatPrice } from "src/lib/format";
-import type { FieldDef, LookupBooking } from "src/types/signup";
+import type {
+  EventItem,
+  FieldDef,
+  LookupBooking,
+  PaymentInfo as PaymentInfoData,
+} from "src/types/signup";
 
 /** 查詢欄位沿用 DynamicField，twid 的檢查碼驗證直接複用 */
 const FIELDS: FieldDef[] = [
@@ -164,6 +180,29 @@ const bookings = ref<LookupBooking[]>([]);
 const isLoading = ref(false);
 const hasSearched = ref(false);
 
+/** eventId → 活動資料，用來取轉帳資訊；抓不到就是 null，那筆不顯示轉帳區塊 */
+const events = ref<Record<string, EventItem | null>>({});
+
+function paymentOf(booking: LookupBooking): PaymentInfoData | null {
+  return events.value[booking.eventId]?.registration.payment ?? null;
+}
+
+/** 查詢結果可能跨活動，把用得到的活動一次抓齊 */
+async function loadEvents(list: LookupBooking[]) {
+  const ids = [...new Set(list.map((b) => b.eventId).filter(Boolean))];
+  await Promise.all(
+    ids.map(async (id) => {
+      if (id in events.value) return;
+      try {
+        events.value[id] = await fetchEventById(id);
+      } catch {
+        // 轉帳資訊拿不到不影響查詢結果本身，靜靜略過就好
+        events.value[id] = null;
+      }
+    }),
+  );
+}
+
 function goPortal() {
   void router.push({ name: "portal" });
 }
@@ -182,6 +221,7 @@ async function onSubmit() {
   try {
     bookings.value = await lookupBookings(form.name ?? "", form.twid ?? "");
     hasSearched.value = true;
+    await loadEvents(bookings.value);
   } catch (err) {
     bookings.value = [];
     hasSearched.value = false;
@@ -316,6 +356,10 @@ async function onSubmit() {
 
   &__people-title {
     margin-top: 20px;
+  }
+
+  &__payment-title {
+    margin-top: 22px;
   }
 
   &__count {

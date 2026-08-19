@@ -24,6 +24,7 @@
 //   bedInfo 會寫進試算表，也會在報名查詢時回傳，讓人一眼看出房間長什麼樣
 var ROOMS = {
   'room-tongpu': { unit: 'bed', capacity: 20, name: '通鋪', bedInfo: '20 人大通鋪' },
+  'room-204-206': { unit: 'room', capacity: 5, rooms: ['204', '205', '206'], name: '204、205、206 號房', bedInfo: '5 單人床' },
   'room-301-302': { unit: 'room', capacity: 4, rooms: ['301', '302'], name: '301、302 號房', bedInfo: '1 雙人床 + 2 單人床' },
   'room-303': { unit: 'room', capacity: 6, rooms: ['303'], name: '303 號房', bedInfo: '2 單人床 + 2 雙人床' },
   'room-304-306': { unit: 'room', capacity: 5, rooms: ['304', '305', '306'], name: '304、305、306 號房', bedInfo: '5 單人床' },

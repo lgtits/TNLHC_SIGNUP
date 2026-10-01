@@ -54,6 +54,7 @@ import EventCard from 'components/EventCard.vue';
 import { useEventList } from 'src/lib/useEvents';
 import { useSignupStore } from 'src/stores/signup-store';
 import { useConfigStore } from 'src/stores/config-store';
+import { canSignup, effectiveStatus } from 'src/lib/registration';
 import type { EventItem } from 'src/types/signup';
 
 const router = useRouter();
@@ -76,7 +77,7 @@ function goLookup() {
 }
 
 function goSignup(event: EventItem) {
-  if (event.status === 'closed' || event.status === 'full') return;
+  if (!canSignup(effectiveStatus(event))) return;
   void router.push({ name: 'signup', params: { eventId: event.id } });
 }
 </script>

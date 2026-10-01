@@ -107,7 +107,8 @@ export interface AddonDef {
 
 // ── 活動層 ────────────────────────────────────────────────
 
-export type EventStatus = 'open' | 'almost_full' | 'full' | 'closed';
+/** upcoming：報名尚未開始（由報名開始日推算，不需寫在資料裡） */
+export type EventStatus = 'upcoming' | 'open' | 'almost_full' | 'full' | 'closed';
 
 /** 繳費／轉帳資訊 */
 export interface PaymentInfo {
@@ -131,8 +132,10 @@ export interface RegistrationSchema {
   requiresAccommodation: boolean;
   roomTypes: RoomType[];
   addons: AddonDef[];
-  /** 報名截止日 ISO date */
-  deadline: string;
+  /** 報名開始日 ISO date；省略代表即日起開放 */
+  startDate?: string;
+  /** 報名結束日 ISO date，當天 23:59:59 後截止 */
+  endDate: string;
   /** 表單上要顯示的注意事項 */
   notices: string[];
   /** 繳費資訊；免費活動可省略 */

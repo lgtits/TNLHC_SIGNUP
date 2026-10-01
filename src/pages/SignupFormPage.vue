@@ -41,9 +41,9 @@
               <dt>地點</dt>
               <dd>{{ event.location }}</dd>
             </div>
-            <div v-if="schema.deadline">
-              <dt>報名截止</dt>
-              <dd>{{ formatDate(schema.deadline) }}</dd>
+            <div v-if="periodText">
+              <dt>報名期間</dt>
+              <dd>{{ periodText }}</dd>
             </div>
           </dl>
 
@@ -161,7 +161,8 @@
               size="lg"
               class="full-width"
               :loading="isSubmitting"
-              label="送出報名"
+              :disable="!isOpen"
+              :label="submitLabel"
             />
           </div>
         </q-form>
@@ -221,6 +222,7 @@ import { useSignupStore } from 'src/stores/signup-store';
 import { useConfigStore } from 'src/stores/config-store';
 import { formatDate, formatDateRange, formatPrice } from 'src/lib/format';
 import { assetUrl } from 'src/lib/assets';
+import { canSignup, effectiveStatus } from 'src/lib/registration';
 
 const props = defineProps<{ eventId: string }>();
 
@@ -243,6 +245,22 @@ const dateText = computed(() =>
 );
 
 const imageSrc = computed(() => assetUrl(event.value?.image));
+
+const periodText = computed(() => {
+  const reg = schema.value;
+  if (!reg?.endDate) return '';
+  return reg.startDate ? `${formatDate(reg.startDate)} – ${formatDate(reg.endDate)}` : `${formatDate(reg.endDate)} 止`;
+});
+
+const status = computed(() => (event.value ? effectiveStatus(event.value) : 'closed'));
+const isOpen = computed(() => canSignup(status.value));
+
+const SUBMIT_CLOSED_LABEL: Partial<Record<typeof status.value, string>> = {
+  upcoming: '報名尚未開始',
+  full: '報名已額滿',
+  closed: '報名已截止',
+};
+const submitLabel = computed(() => SUBMIT_CLOSED_LABEL[status.value] ?? '送出報名');
 
 const heroStyle = computed(() =>
   imageSrc.value ? { backgroundImage: `url("${imageSrc.value}")` } : undefined,
@@ -303,7 +321,7 @@ function retryQuota() {
 
 /** 驗證通過只開確認彈窗，不直接送出 */
 async function onSubmit() {
-  if (!event.value || !schema.value) return;
+  if (!event.value || !schema.value || !isOpen.value) return;
 
   roomError.value = schema.value.requiresAccommodation && !store.draft.roomTypeId;
   const valid = await formRef.value?.validate();
@@ -314,7 +332,7 @@ async function onSubmit() {
 
 /** 真正送出。isSubmitting 期間彈窗鎖住，避免重複報名 */
 async function confirmSubmit() {
-  if (isSubmitting.value) return;
+  if (isSubmitting.value || !isOpen.value) return;
 
   isSubmitting.value = true;
   try {

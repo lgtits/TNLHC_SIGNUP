@@ -11,7 +11,7 @@
     <!-- 左：標題，照片當背景；沒照片就是淺灰底 -->
     <div class="event-card__main" :style="mainStyle">
       <div class="event-card__inner">
-        <p class="eyebrow event-card__status" :class="`is-${event.status}`">
+        <p class="eyebrow event-card__status" :class="`is-${status}`">
           {{ statusLabel }}
         </p>
         <h3 class="event-card__title">{{ event.title }}</h3>
@@ -30,9 +30,9 @@
           <dt>地點</dt>
           <dd>{{ event.location }}</dd>
         </div>
-        <div v-if="deadlineText">
-          <dt>報名截止</dt>
-          <dd>{{ deadlineText }}</dd>
+        <div v-if="periodText">
+          <dt>報名期間</dt>
+          <dd>{{ periodText }}</dd>
         </div>
       </dl>
 
@@ -43,7 +43,7 @@
           color="primary"
           class="event-card__btn"
           :disable="isClosed"
-          :label="isClosed ? '已截止' : '立即報名'"
+          :label="isClosed ? statusLabel : '立即報名'"
           @click.stop="emit('select', event)"
         />
         <!-- 報過名的人回來查房號與繳費狀態 -->
@@ -65,6 +65,7 @@ import { computed } from 'vue';
 import type { EventItem } from 'src/types/signup';
 import { formatDate, formatDateRange } from 'src/lib/format';
 import { assetUrl } from 'src/lib/assets';
+import { canSignup, effectiveStatus } from 'src/lib/registration';
 
 const props = withDefaults(
   defineProps<{
@@ -80,17 +81,18 @@ const emit = defineEmits<{
 }>();
 
 const STATUS_LABEL: Record<EventItem['status'], string> = {
+  upcoming: '尚未開放',
   open: '報名中',
   almost_full: '名額有限',
   full: '已額滿',
   closed: '已截止',
 };
 
-const statusLabel = computed(() => STATUS_LABEL[props.event.status]);
+const status = computed(() => effectiveStatus(props.event));
 
-const isClosed = computed(
-  () => props.event.status === 'closed' || props.event.status === 'full',
-);
+const statusLabel = computed(() => STATUS_LABEL[status.value]);
+
+const isClosed = computed(() => !canSignup(status.value));
 
 const imageSrc = computed(() => assetUrl(props.event.image));
 
@@ -102,9 +104,10 @@ const dateText = computed(() =>
   formatDateRange(props.event.startDate, props.event.endDate),
 );
 
-const deadlineText = computed(() => {
-  const deadline = props.event.registration.deadline;
-  return deadline ? formatDate(deadline) : '';
+const periodText = computed(() => {
+  const { startDate, endDate } = props.event.registration;
+  if (!endDate) return '';
+  return startDate ? `${formatDate(startDate)} – ${formatDate(endDate)}` : `${formatDate(endDate)} 止`;
 });
 </script>
 
@@ -159,6 +162,7 @@ const deadlineText = computed(() => {
       color: var(--q-warning);
     }
 
+    &.is-upcoming,
     &.is-full,
     &.is-closed {
       color: rgba(0, 0, 0, 0.38);
